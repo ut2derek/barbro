@@ -33,12 +33,11 @@
   },
   "today": {
     "title": "Dziś",
-    "roleOwner": "Właściciel salonu",
-    "roleStaff": "Pracownik",
-    "noSalon": "To konto nie jest jeszcze przypisane do żadnego salonu.",
-    "salonError": "Nie udało się pobrać danych salonu.",
-    "nextStep": "Kalendarz w budowie",
-    "nextStepDescription": "Wizyty, szybkie akcje i widok tygodnia pojawią się w kolejnym etapie."
+    "visitsCount": "Wizyty",
+    "revenue": "Utarg",
+    "loadError": "Nie udało się pobrać wizyt.",
+    "emptyTitle": "Dziś pusto",
+    "emptyDescription": "Nie masz dziś żadnych wizyt. Wolne popołudnie albo czas na wrzucenie grafiku."
   },
   "account": {
     "title": "Konto",
@@ -55,5 +54,50 @@
   },
   "setup": {
     "supabaseMissing": "Brak konfiguracji połączenia z bazą (.env.local)."
+  },
+  "calendar": {
+    "title": "Kalendarz",
+    "today": "dzisiaj",
+    "backToToday": "Wróć do dzisiaj",
+    "previousDay": "Poprzedni dzień",
+    "nextDay": "Następny dzień",
+    "allStaff": "Wszyscy",
+    "emptyTitle": "Brak wizyt",
+    "emptyDescription": "Tego dnia nikt nie jest umówiony."
+  },
+  "status": {
+    "pending_confirmation": "Czeka na potwierdzenie klienta",
+    "pending_approval": "Do akceptacji",
+    "confirmed": "Potwierdzona",
+    "completed": "Zrealizowana",
+    "cancelled_by_client": "Odwołana przez klienta",
+    "cancelled_by_salon": "Odwołana przez salon",
+    "rescheduled": "Przełożona",
+    "expired": "Wygasła",
+    "no_show": "Klient się nie stawił"
+  },
+  "booking": {
+    "services": "Usługi",
+    "staff": "Fryzjer",
+    "clientNote": "Uwagi klienta",
+    "cancellationComment": "Powód odwołania",
+    "priceLocked": "Cena zapisana przy rezerwacji — zmiana cennika jej nie ruszy.",
+    "call": "Zadzwoń",
+    "accept": "Akceptuj wizytę",
+    "markCompleted": "Oznacz jako zrealizowaną",
+    "markNoShow": "Klient się nie stawił",
+    "reschedule": "Przełóż termin",
+    "cancelBooking": "Odwołaj wizytę",
+    "cancelTitle": "Odwołanie wizyty",
+    "cancelDescription": "Powód trafi do klienta w mailu, więc napisz go tak, jak chcesz, żeby go przeczytał.",
+    "cancelReason": "Powód odwołania",
+    "cancelPlaceholder": "np. Fryzjer zachorował, przepraszamy",
+    "cancelConfirm": "Odwołaj i powiadom klienta",
+    "actionError": "Nie udało się wykonać tej operacji.",
+    "rescheduleTitle": "Nowy termin",
+    "currentTerm": "Obecnie: {term}",
+    "rescheduleError": "Tego terminu nie udało się zająć. Wybierz inny.",
+    "noSlotsTitle": "Brak wolnych terminów",
+    "noSlotsDescription": "Tego dnia nie ma miejsca na tę wizytę. Sprawdź inny dzień."
   }
 }
