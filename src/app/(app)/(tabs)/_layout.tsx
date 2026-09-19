@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -98,12 +98,15 @@ export default function TabsLayout() {
         animationType="slide"
         onRequestClose={() => setActionsOpen(false)}
       >
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('common.cancel')}
-          onPress={() => setActionsOpen(false)}
-          style={{ flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'flex-end' }}
-        >
+        {/* Tło zamykające arkusz leży pod nim, a nie wokół niego — inaczej
+            przyciski w arkuszu byłyby przyciskami w przycisku. */}
+        <View style={{ flex: 1, justifyContent: 'flex-end' }}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t('common.cancel')}
+            onPress={() => setActionsOpen(false)}
+            style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.overlay }]}
+          />
           <View
             style={{
               backgroundColor: theme.colors.surfaceElevated,
@@ -137,7 +140,7 @@ export default function TabsLayout() {
               onPress={() => setActionsOpen(false)}
             />
           </View>
-        </Pressable>
+        </View>
       </Modal>
     </>
   );

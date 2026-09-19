@@ -74,7 +74,11 @@
     "modeWeek": "Tydzień",
     "previous": "Poprzedni",
     "next": "Następny",
-    "weekFree": "wolne"
+    "weekFree": "wolne",
+    "modeMonth": "Miesiąc",
+    "pickMonth": "Wybierz miesiąc",
+    "previousYear": "Poprzedni rok",
+    "nextYear": "Następny rok"
   },
   "status": {
     "pending_confirmation": "Czeka na potwierdzenie klienta",

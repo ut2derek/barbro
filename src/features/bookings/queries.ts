@@ -333,21 +333,25 @@ export function useDeleteTimeBlock() {
   });
 }
 
-/** Wizyty całego tygodnia jednym zapytaniem — widok tygodnia grupuje je po dniach. */
-export function useWeekBookings(args: {
+/**
+ * Wizyty z dowolnego zakresu dni — jedno zapytanie obsługuje tydzień i miesiąc,
+ * a widok grupuje je po dniach u siebie.
+ */
+export function useBookingsInRange(args: {
   salonId: string | undefined;
   zone: string;
-  weekStart: DateTime;
+  from: DateTime;
+  days: number;
   staffId?: string | null;
 }) {
-  const weekKey = args.weekStart.setZone(args.zone).toISODate();
+  const fromKey = args.from.setZone(args.zone).toISODate();
 
   return useQuery({
-    queryKey: ['bookings-week', args.salonId, weekKey, args.staffId ?? 'all'],
+    queryKey: ['bookings-week', args.salonId, fromKey, args.days, args.staffId ?? 'all'],
     enabled: Boolean(args.salonId),
     queryFn: async (): Promise<BookingListItem[]> => {
-      const start = args.weekStart.setZone(args.zone).startOf('day');
-      const end = start.plus({ days: 7 });
+      const start = args.from.setZone(args.zone).startOf('day');
+      const end = start.plus({ days: args.days });
 
       let request = getSupabase()
         .from('bookings')
