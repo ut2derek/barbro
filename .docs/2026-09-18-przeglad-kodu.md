@@ -1,5 +1,12 @@
 # Przegląd kodu i naprawa — 18.09.2026
 
+> **Czytaj razem z [notatką z 19.09](2026-09-19-druga-tura-poprawek.md).**
+> Stan repozytorium był później odtwarzany z zapisów sesji i część poprawek
+> opisanych niżej nie znalazła się w kodzie — między innymi rozbicie strony
+> rezerwacji (B5), wspólna siatka terminów (B4), strefa czasowa z bazy (B1)
+> i komunikaty błędów od serwera (C). Zostały przywrócone 19.09; tabela
+> „Stan przed i po" w tym dokumencie opisuje 18.09, nie dzisiaj.
+
 Dokument dla programisty przejmującego projekt. Opisuje, co było źle, dlaczego
 to było źle i co zostało zrobione. Każda usterka ma odsyłacz do testu, który
 pilnuje, żeby nie wróciła.

@@ -1,4 +1,4 @@
-# Barbro — aplikacja dla barbera
+# Barbo — aplikacja dla barbera
 
 Aplikacja natywna (iOS + Android) dla barbershopów i salonów fryzjerskich
 oraz wspólny backend w Supabase. Strona rezerwacji dla klientów powstaje
