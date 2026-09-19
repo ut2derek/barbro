@@ -53,7 +53,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen scroll>
+    <Screen scroll edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ gap: theme.spacing.xl }}
@@ -123,6 +123,13 @@ export default function LoginScreen() {
                 }}
               />
             ))}
+
+            {/* Strona rezerwacji nie wymaga logowania — wchodzimy wprost. */}
+            <Button
+              label={t('auth.testClientBooking')}
+              variant="secondary"
+              onPress={() => router.push('/rezerwacja/barbershop-kowalski')}
+            />
           </Card>
         ) : null}
 

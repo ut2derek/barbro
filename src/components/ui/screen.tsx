@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { ScrollView, View, type ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/theme';
 
@@ -8,13 +8,20 @@ type Props = {
   children: ReactNode;
   scroll?: boolean;
   style?: ViewStyle;
+  /**
+   * Krawędzie, przy których odsuwamy treść od wyciętego obszaru ekranu.
+   * Domyślnie tylko dół: ekrany otwierane z zakładek mają systemowy nagłówek,
+   * który sam odsuwa treść od góry — drugi margines robiłby pustą przerwę.
+   * Ekrany bez nagłówka (logowanie, strona rezerwacji) podają też „top”.
+   */
+  edges?: readonly Edge[];
 };
 
 /** Maksymalna szerokość treści — na telefonie bez znaczenia, na dużym ekranie ratuje czytelność. */
 const MAX_CONTENT_WIDTH = 560;
 
 /** Bezpieczny obszar + tło ekranu. Każdy ekran zaczyna się od tego komponentu. */
-export function Screen({ children, scroll = false, style }: Props) {
+export function Screen({ children, scroll = false, style, edges = ['bottom'] }: Props) {
   const theme = useTheme();
 
   const content: ViewStyle = {
@@ -26,10 +33,7 @@ export function Screen({ children, scroll = false, style }: Props) {
   };
 
   return (
-    <SafeAreaView
-      style={{ flex: 1, backgroundColor: theme.colors.background }}
-      edges={['top', 'bottom']}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={edges}>
       {scroll ? (
         <ScrollView
           style={{ flex: 1 }}
