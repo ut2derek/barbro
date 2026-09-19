@@ -179,12 +179,12 @@ insert into public.clients (id, salon_id, first_name, last_name, email, phone, i
 -- ---------------------------------------------------------------------------
 
 -- Dzisiaj 10:00 u Marka — potwierdzona, strzyżenie.
-insert into public.bookings (id, salon_id, staff_id, client_id, starts_at, ends_at, status, total_price_grosz, source)
+insert into public.bookings (id, salon_id, staff_id, client_id, starts_at, ends_at, buffer_after_minutes, status, total_price_grosz, source)
 values ('70000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
         '30000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001',
         (current_date + time '10:00') at time zone 'Europe/Warsaw',
         (current_date + time '10:45') at time zone 'Europe/Warsaw',
-        'confirmed', 8000, 'web');
+        5, 'confirmed', 8000, 'web');
 
 insert into public.booking_items (salon_id, booking_id, service_id, item_order, name_snapshot, price_grosz, duration_minutes, buffer_after_minutes)
 values ('20000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001',

@@ -8,10 +8,16 @@ create table public.bookings (
   client_id uuid not null references public.clients (id) on delete restrict,
 
   starts_at timestamptz not null,
+  -- Koniec samej wizyty — to widzi klient i to pokazuje kalendarz.
   ends_at timestamptz not null,
-  -- Zakres wyliczany z powyższych; domknięty z lewej, otwarty z prawej,
-  -- więc wizyta 10:00–11:00 i 11:00–12:00 nie kolidują.
-  time_range tstzrange generated always as (tstzrange(starts_at, ends_at, '[)')) stored,
+  -- Przerwa po ostatniej usłudze, skopiowana przy tworzeniu rezerwacji.
+  buffer_after_minutes integer not null default 0 check (buffer_after_minutes >= 0),
+  -- Czas faktycznie zajęty: wizyta razem z przerwą po niej. Na tym zakresie
+  -- działa blokada nakładania, więc przerwy pilnuje baza, a nie aplikacja.
+  -- Zakres domknięty z lewej i otwarty z prawej, więc wizyty 10:00–11:00
+  -- i 11:00–12:00 nie kolidują ze sobą.
+  -- Wypełnia go wyzwalacz poniżej; wartość podana z aplikacji jest nadpisywana.
+  time_range tstzrange not null,
 
   status public.booking_status not null default 'pending_confirmation',
   -- Cena zapisana w momencie rezerwacji; nigdy się nie zmienia.
@@ -45,6 +51,27 @@ create table public.bookings (
     or (cancellation_comment is not null and length(trim(cancellation_comment)) > 0)
   )
 );
+
+-- Zajęty czas liczy baza, nie aplikacja. Dodawanie minut do znacznika czasu
+-- nie jest w Postgresie wyrażeniem stałym, więc nie może to być kolumna
+-- wyliczana — stąd wyzwalacz.
+create or replace function public.tg_booking_time_range()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.time_range := tstzrange(
+    new.starts_at,
+    new.ends_at + make_interval(mins => coalesce(new.buffer_after_minutes, 0)),
+    '[)'
+  );
+  return new;
+end;
+$$;
+
+create trigger bookings_set_time_range
+  before insert or update of starts_at, ends_at, buffer_after_minutes on public.bookings
+  for each row execute function public.tg_booking_time_range();
 
 -- SERCE OCHRONY PRZED PODWÓJNĄ REZERWACJĄ.
 -- Ten sam fryzjer nie może mieć dwóch nakładających się wizyt w statusach
