@@ -38,14 +38,14 @@ export const queryKeys = {
 
   // --- grafik ---
   salonHours: (salonId: string | undefined) => ['salon-hours', salonId] as const,
-  workingHours: (salonId: string | undefined, staffId: string | undefined) =>
+  workingHours: (salonId: string | undefined, staffId: string | null | undefined) =>
     ['working-hours', salonId, staffId] as const,
   scheduleExceptions: (salonId: string | undefined) => ['schedule-exceptions', salonId] as const,
 
   // --- zespół ---
   team: (salonId: string | undefined) => ['team', salonId] as const,
   staff: (salonId: string | undefined) => ['staff', salonId] as const,
-  staffServices: (salonId: string | undefined, staffId: string | undefined) =>
+  staffServices: (salonId: string | undefined, staffId: string | null | undefined) =>
     ['staff-services', salonId, staffId] as const,
 
   // --- klienci ---

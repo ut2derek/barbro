@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { useUndo } from '@/components/ui/undo-toast';
 import { t } from '@/i18n';
+import { bookingListPrefixes, invalidateBookings } from '@/lib/query-keys';
 
 import { useChangeBookingStatus, type BookingListItem, type BookingStatus } from './queries';
 
@@ -18,23 +19,23 @@ export function useQuickBookingAction() {
   const { runWithUndo } = useUndo();
 
   return (booking: BookingListItem, status: BookingStatus, label: string) => {
-    // Natychmiastowa zmiana w tym, co widać.
-    queryClient.setQueriesData<BookingListItem[]>({ queryKey: ['bookings'] }, (current) =>
-      current?.map((item) => (item.id === booking.id ? { ...item, status } : item)),
-    );
-    queryClient.setQueriesData<BookingListItem[]>({ queryKey: ['bookings-week'] }, (current) =>
-      current?.map((item) => (item.id === booking.id ? { ...item, status } : item)),
-    );
+    // Natychmiastowa zmiana w tym, co widać — we wszystkich listach wizyt
+    // naraz (dzień, tydzień, miesiąc), bo barber patrzy raz na jedną, raz
+    // na drugą. Które to listy, mówi `query-keys.ts`.
+    for (const queryKey of bookingListPrefixes) {
+      queryClient.setQueriesData<BookingListItem[]>({ queryKey }, (current) =>
+        current?.map((item) => (item.id === booking.id ? { ...item, status } : item)),
+      );
+    }
 
     runWithUndo({
       message: t('booking.quickActionDone', { action: label }),
       commit: async () => {
         await changeStatus.mutateAsync({ bookingId: booking.id, status });
       },
-      undo: () => {
-        void queryClient.invalidateQueries({ queryKey: ['bookings'] });
-        void queryClient.invalidateQueries({ queryKey: ['bookings-week'] });
-      },
+      // Cofnięcie przywraca stan z serwera. Odświeżamy wszystko, co pokazuje
+      // wizyty — razem z kropką „do akceptacji", która też zdążyła się zmienić.
+      undo: () => invalidateBookings(queryClient),
     });
   };
 }

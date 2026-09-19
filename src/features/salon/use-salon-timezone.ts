@@ -1,5 +1,14 @@
 import { useCurrentSalon } from './use-current-salon';
 
+/** Strefa urządzenia — najbliższa prawdy, dopóki nie wiemy, gdzie jest salon. */
+function deviceTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Warsaw';
+  } catch {
+    return 'Europe/Warsaw';
+  }
+}
+
 /**
  * Strefa czasowa salonu — jedyne źródło prawdy dla wyświetlania godzin.
  *
@@ -10,9 +19,11 @@ import { useCurrentSalon } from './use-current-salon';
  * a sprzedajemy jedną aplikację wielu salonom.
  *
  * Zanim dane salonu się wczytają, zwracamy strefę urządzenia. To tylko chwila
- * i tylko ekrany ładowania, a żadna godzina nie jest wtedy jeszcze rysowana.
+ * i tylko ekrany ładowania; wpisana na sztywno Polska myliłaby się o tyle
+ * godzin, ile dzieli salon od Warszawy, a strefa telefonu barbera zwykle
+ * zgadza się ze strefą salonu, w którym on stoi.
  */
 export function useSalonTimezone(): string {
   const { data: salon } = useCurrentSalon();
-  return salon?.timezone ?? 'Europe/Warsaw';
+  return salon?.timezone ?? deviceTimezone();
 }

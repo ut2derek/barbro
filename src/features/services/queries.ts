@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
 
+import { parseRows } from '@/lib/parse';
 import { getSupabase } from '@/lib/supabase';
+import { invalidateServices, queryKeys } from '@/lib/query-keys';
 
 export type ServiceOption = {
   id: string;
@@ -29,6 +32,21 @@ export type ServiceCategory = {
 };
 
 /**
+ * Kształt wiersza usługi z dołączoną kategorią. Dołączeń Supabase nie umie
+ * otypować, więc zamiast `as unknown as` opisujemy je schematem.
+ */
+const serviceRow = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  buffer_after_minutes: z.number(),
+  visible: z.boolean(),
+  sort_order: z.number(),
+  category_id: z.string().nullable(),
+  service_categories: z.object({ name: z.string(), sort_order: z.number() }).nullable(),
+});
+
+/**
  * Usługi wraz z cenami. Ceny liczy funkcja w bazie — ta sama, której użyje
  * strona rezerwacji — więc aplikacja nie powiela reguł promocji.
  */
@@ -36,7 +54,7 @@ export function useServices(args: { salonId: string | undefined; staffId?: strin
   const { salonId, staffId } = args;
 
   return useQuery({
-    queryKey: ['services', salonId, staffId ?? 'all'],
+    queryKey: queryKeys.services(salonId, staffId ?? 'all'),
     enabled: Boolean(salonId),
     queryFn: async (): Promise<ServiceOption[]> => {
       const supabase = getSupabase();
@@ -57,14 +75,11 @@ export function useServices(args: { salonId: string | undefined; staffId?: strin
 
       const pricing = new Map(pricingResult.data.map((row) => [row.service_id, row]));
 
-      return servicesResult.data
+      return parseRows(serviceRow, servicesResult.data, 'usługi salonu')
         .filter((service) => pricing.has(service.id))
         .map((service) => {
           const price = pricing.get(service.id)!;
-          const category = service.service_categories as unknown as {
-            name: string;
-            sort_order: number;
-          } | null;
+          const category = service.service_categories;
 
           return {
             id: service.id,
@@ -89,7 +104,7 @@ export function useServices(args: { salonId: string | undefined; staffId?: strin
 
 export function useServiceCategories(salonId: string | undefined) {
   return useQuery({
-    queryKey: ['service-categories', salonId],
+    queryKey: queryKeys.serviceCategories(salonId),
     enabled: Boolean(salonId),
     queryFn: async (): Promise<ServiceCategory[]> => {
       const { data, error } = await getSupabase()
@@ -104,14 +119,14 @@ export function useServiceCategories(salonId: string | undefined) {
   });
 }
 
+/**
+ * Cennik widzi zarówno barber, jak i klient na stronie rezerwacji, a długość
+ * usługi decyduje o wolnych terminach — dlatego po każdej zmianie odświeżamy
+ * całą rodzinę naraz (lista w `lib/query-keys`).
+ */
 function useServiceInvalidation() {
   const queryClient = useQueryClient();
-
-  return () => {
-    void queryClient.invalidateQueries({ queryKey: ['services'] });
-    void queryClient.invalidateQueries({ queryKey: ['service-categories'] });
-    void queryClient.invalidateQueries({ queryKey: ['slots'] });
-  };
+  return () => invalidateServices(queryClient);
 }
 
 export type ServiceInput = {
@@ -229,6 +244,120 @@ export function useDeleteCategory() {
         .from('service_categories')
         .delete()
         .eq('id', categoryId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+}
+// ─────────────────────────── dodatki do usług ───────────────────────────
+// Dodatek (mycie, tuszowanie siwizny) wydłuża wizytę i wchodzi do jej kwoty.
+// Bez wskazanej usługi proponowany jest przy każdej — patrz CLAUDE.md §3.
+
+export type ServiceAddon = {
+  id: string;
+  /** Puste = dodatek proponowany przy każdej usłudze salonu. */
+  serviceId: string | null;
+  serviceName: string | null;
+  name: string;
+  description: string | null;
+  priceGrosz: number;
+  durationMinutes: number;
+  maxQuantity: number;
+  active: boolean;
+  sortOrder: number;
+};
+
+export type AddonInput = {
+  salonId: string;
+  /** Puste przy zakładaniu nowego dodatku. */
+  id?: string;
+  serviceId: string | null;
+  name: string;
+  description: string | null;
+  priceGrosz: number;
+  durationMinutes: number;
+  maxQuantity: number;
+  active: boolean;
+  /** Podajemy tylko przy zakładaniu — przy edycji kolejność zostaje. */
+  sortOrder?: number;
+};
+
+export function useServiceAddons(salonId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.addons(salonId),
+    enabled: Boolean(salonId),
+    queryFn: async (): Promise<ServiceAddon[]> => {
+      const { data, error } = await getSupabase()
+        .from('service_addons')
+        .select(
+          'id, service_id, name, description, price_grosz, duration_minutes, max_quantity, active, sort_order, services ( name )',
+        )
+        .eq('salon_id', salonId!)
+        .order('sort_order');
+
+      if (error) throw error;
+
+      return data.map((addon) => ({
+        id: addon.id,
+        serviceId: addon.service_id,
+        serviceName: addon.services?.name ?? null,
+        name: addon.name,
+        description: addon.description,
+        priceGrosz: addon.price_grosz,
+        durationMinutes: addon.duration_minutes,
+        maxQuantity: addon.max_quantity,
+        active: addon.active,
+        sortOrder: addon.sort_order,
+      }));
+    },
+  });
+}
+
+/** Zapis dodatku — ten sam ekran zakłada nowy i edytuje istniejący. */
+export function useSaveAddon() {
+  const invalidate = useServiceInvalidation();
+
+  return useMutation({
+    mutationFn: async (input: AddonInput): Promise<string> => {
+      const payload = {
+        salon_id: input.salonId,
+        service_id: input.serviceId,
+        name: input.name.trim(),
+        description: input.description?.trim() || null,
+        price_grosz: input.priceGrosz,
+        duration_minutes: input.durationMinutes,
+        max_quantity: input.maxQuantity,
+        active: input.active,
+        ...(input.sortOrder !== undefined ? { sort_order: input.sortOrder } : {}),
+      };
+
+      const supabase = getSupabase();
+
+      if (input.id) {
+        const { error } = await supabase.from('service_addons').update(payload).eq('id', input.id);
+        if (error) throw error;
+        return input.id;
+      }
+
+      const { data, error } = await supabase
+        .from('service_addons')
+        .insert(payload)
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteAddon() {
+  const invalidate = useServiceInvalidation();
+
+  return useMutation({
+    mutationFn: async (addonId: string) => {
+      const { error } = await getSupabase().from('service_addons').delete().eq('id', addonId);
       if (error) throw error;
     },
     onSuccess: invalidate,

@@ -45,7 +45,7 @@ export function usePublicBookingFlow(slug: string | undefined) {
   const [addonsOpen, setAddonsOpen] = useState(false);
   const [staffId, setStaffId] = useState<string | null>(null);
   const [stripStart, setStripStart] = useState(() => DateTime.now().startOf('day'));
-  const [day, setDay] = useState(() => DateTime.now().startOf('day'));
+  const [day, setDay] = useState<DateTime<boolean>>(() => DateTime.now().startOf('day'));
   const [pendingSlot, setPendingSlot] = useState<string | null>(null);
   const [form, setForm] = useState<BookingForm>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);

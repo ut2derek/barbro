@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import type { TablesUpdate } from '@/lib/database.types';
 import { getSupabase } from '@/lib/supabase';
+import { invalidateClients, queryKeys } from '@/lib/query-keys';
 
+/** Klient na liście i w wyszukiwarce. */
 export type ClientOption = {
   id: string;
   name: string;
@@ -11,12 +14,36 @@ export type ClientOption = {
   blocked: boolean;
 };
 
+/** Karta klienta — to samo co wyżej plus dane, których lista nie potrzebuje. */
+export type ClientDetails = ClientOption & {
+  firstName: string;
+  lastName: string | null;
+  internalNote: string | null;
+  createdAt: string;
+};
+
+/** Wizyta na karcie klienta — historia, nie kalendarz. */
+export type ClientBooking = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: string;
+  totalPriceGrosz: number;
+  staffName: string;
+  services: string[];
+};
+
+/** Imię i nazwisko w jedno pole — wyświetlamy je razem wszędzie. */
+function pelneImie(firstName: string, lastName: string | null): string {
+  return [firstName, lastName].filter(Boolean).join(' ');
+}
+
 /** Wyszukiwanie klienta po imieniu, nazwisku, telefonie albo mailu. */
 export function useClientSearch(args: { salonId: string | undefined; query: string }) {
   const term = args.query.trim();
 
   return useQuery({
-    queryKey: ['clients', args.salonId, term],
+    queryKey: queryKeys.clients(args.salonId, term),
     enabled: Boolean(args.salonId),
     queryFn: async (): Promise<ClientOption[]> => {
       let request = getSupabase()
@@ -38,11 +65,75 @@ export function useClientSearch(args: { salonId: string | undefined; query: stri
 
       return data.map((client) => ({
         id: client.id,
-        name: [client.first_name, client.last_name].filter(Boolean).join(' '),
+        name: pelneImie(client.first_name, client.last_name),
         phone: client.phone,
         email: client.email,
         noShowCount: client.no_show_count,
         blocked: client.blocked,
+      }));
+    },
+  });
+}
+
+/** Karta jednego klienta. */
+export function useClient(clientId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.client(clientId),
+    enabled: Boolean(clientId),
+    queryFn: async (): Promise<ClientDetails> => {
+      const { data, error } = await getSupabase()
+        .from('clients')
+        .select(
+          'id, first_name, last_name, phone, email, no_show_count, blocked, internal_note, created_at',
+        )
+        .eq('id', clientId!)
+        .single();
+
+      if (error) throw error;
+
+      return {
+        id: data.id,
+        name: pelneImie(data.first_name, data.last_name),
+        firstName: data.first_name,
+        lastName: data.last_name,
+        phone: data.phone,
+        email: data.email,
+        noShowCount: data.no_show_count,
+        blocked: data.blocked,
+        internalNote: data.internal_note,
+        createdAt: data.created_at,
+      };
+    },
+  });
+}
+
+/** Historia wizyt klienta — od najnowszej. */
+export function useClientBookings(clientId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.clientBookings(clientId),
+    enabled: Boolean(clientId),
+    queryFn: async (): Promise<ClientBooking[]> => {
+      const { data, error } = await getSupabase()
+        .from('bookings')
+        .select(
+          'id, starts_at, ends_at, status, total_price_grosz, staff ( display_name ), booking_items ( name_snapshot, item_order )',
+        )
+        .eq('client_id', clientId!)
+        .order('starts_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      return data.map((row) => ({
+        id: row.id,
+        startsAt: row.starts_at,
+        endsAt: row.ends_at,
+        status: row.status,
+        totalPriceGrosz: row.total_price_grosz,
+        staffName: row.staff?.display_name ?? '',
+        services: [...row.booking_items]
+          .sort((a, b) => a.item_order - b.item_order)
+          .map((item) => item.name_snapshot),
       }));
     },
   });
@@ -74,8 +165,34 @@ export function useCreateClient() {
       if (error) throw error;
       return data.id;
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['clients'] });
+    onSuccess: () => invalidateClients(queryClient),
+  });
+}
+
+/**
+ * Zmiana danych klienta. Pola nieprzekazane zostają bez zmian — dzięki temu
+ * jeden przełącznik „zablokowany" nie nadpisuje notatki wpisanej obok.
+ */
+export function useUpdateClient() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: {
+      clientId: string;
+      internalNote?: string | null;
+      blocked?: boolean;
+      phone?: string;
+      email?: string;
+    }) => {
+      const payload: TablesUpdate<'clients'> = {};
+      if (args.internalNote !== undefined) payload.internal_note = args.internalNote?.trim() || null;
+      if (args.blocked !== undefined) payload.blocked = args.blocked;
+      if (args.phone !== undefined) payload.phone = args.phone.trim();
+      if (args.email !== undefined) payload.email = args.email.trim().toLowerCase();
+
+      const { error } = await getSupabase().from('clients').update(payload).eq('id', args.clientId);
+      if (error) throw error;
     },
+    onSuccess: () => invalidateClients(queryClient),
   });
 }

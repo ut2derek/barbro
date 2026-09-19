@@ -16,6 +16,28 @@ export function initSentry() {
 }
 
 /**
+ * BŁĄD SPODZIEWANY — TAKI, KTÓRY POKAZUJEMY UŻYTKOWNIKOWI
+ *
+ * Zły adres e-mail, zajęty termin, przekroczony limit prób. To nie są awarie,
+ * tylko normalny przebieg rozmowy z człowiekiem. Gdyby szły do Sentry, każda
+ * literówka klienta wyglądałaby tam jak usterka i utonęłyby w tym prawdziwe
+ * awarie.
+ *
+ * Znacznik siedzi pod symbolem, więc nie da się go podrobić danymi z sieci
+ * ani zgubić przy kopiowaniu obiektu.
+ */
+const EXPECTED = Symbol('błąd spodziewany');
+
+export function markExpected<E extends object>(error: E): E {
+  Object.defineProperty(error, EXPECTED, { value: true, enumerable: false });
+  return error;
+}
+
+export function isExpected(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && EXPECTED in error;
+}
+
+/**
  * Zgłoszenie błędu. Jedyna droga, którą błąd ma opuścić aplikację — nie
  * używamy `console.error`, bo na telefonie użytkownika nikt go nie przeczyta.
  *
@@ -23,6 +45,9 @@ export function initSentry() {
  * w Sentry dało się grupować bez czytania stosu wywołań.
  */
 export function captureError(error: unknown, where: string, extra?: Record<string, unknown>) {
+  // Błąd, który użytkownik już zobaczył na ekranie, nie jest zgłoszeniem.
+  if (isExpected(error)) return;
+
   if (__DEV__) {
     console.error(`[${where}]`, error, extra ?? '');
   }

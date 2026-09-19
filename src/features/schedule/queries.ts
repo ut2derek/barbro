@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
 
 import type { Database } from '@/lib/database.types';
+import { parseRows } from '@/lib/parse';
+import { invalidateSchedule, queryKeys } from '@/lib/query-keys';
 import { getSupabase } from '@/lib/supabase';
 
 export type TimeWindow = {
@@ -32,7 +35,7 @@ function trimTime(value: string): string {
 
 export function useSalonHours(salonId: string | undefined) {
   return useQuery({
-    queryKey: ['salon-hours', salonId],
+    queryKey: queryKeys.salonHours(salonId),
     enabled: Boolean(salonId),
     queryFn: async (): Promise<TimeWindow[]> => {
       const { data, error } = await getSupabase()
@@ -55,7 +58,7 @@ export function useSalonHours(salonId: string | undefined) {
 
 export function useWorkingHours(args: { salonId: string | undefined; staffId: string | null }) {
   return useQuery({
-    queryKey: ['working-hours', args.salonId, args.staffId],
+    queryKey: queryKeys.workingHours(args.salonId, args.staffId),
     enabled: Boolean(args.salonId) && Boolean(args.staffId),
     queryFn: async (): Promise<TimeWindow[]> => {
       const { data, error } = await getSupabase()
@@ -76,9 +79,26 @@ export function useWorkingHours(args: { salonId: string | undefined; staffId: st
   });
 }
 
+/**
+ * Kształt wiersza z dołączoną tabelą `staff`. Supabase nie potrafi otypować
+ * dołączeń, więc wcześniej stało tu `as unknown as` — zapis, który wyłącza
+ * sprawdzanie typów. Schemat sprawdza to naprawdę.
+ */
+const exceptionRow = z.object({
+  id: z.string(),
+  staff_id: z.string().nullable(),
+  exception_type: z.string(),
+  starts_on: z.string(),
+  ends_on: z.string(),
+  start_time: z.string().nullable(),
+  end_time: z.string().nullable(),
+  reason: z.string().nullable(),
+  staff: z.object({ display_name: z.string() }).nullable(),
+});
+
 export function useScheduleExceptions(salonId: string | undefined) {
   return useQuery({
-    queryKey: ['schedule-exceptions', salonId],
+    queryKey: queryKeys.scheduleExceptions(salonId),
     enabled: Boolean(salonId),
     queryFn: async (): Promise<ScheduleException[]> => {
       const { data, error } = await getSupabase()
@@ -92,11 +112,11 @@ export function useScheduleExceptions(salonId: string | undefined) {
 
       if (error) throw error;
 
-      return data.map((row) => ({
+      return parseRows(exceptionRow, data, 'wyjątki w grafiku').map((row) => ({
         id: row.id,
         staffId: row.staff_id,
-        staffName: (row.staff as unknown as { display_name: string } | null)?.display_name ?? null,
-        type: row.exception_type,
+        staffName: row.staff?.display_name ?? null,
+        type: row.exception_type as ScheduleException['type'],
         startsOn: row.starts_on,
         endsOn: row.ends_on,
         startTime: row.start_time ? trimTime(row.start_time) : null,
@@ -107,16 +127,14 @@ export function useScheduleExceptions(salonId: string | undefined) {
   });
 }
 
+/**
+ * Zmiana grafiku przelicza wolne terminy — także te, które widzi klient na
+ * stronie rezerwacji. Co dokładnie odświeżyć, mówi `query-keys.ts`.
+ */
 function useScheduleInvalidation() {
   const queryClient = useQueryClient();
 
-  return () => {
-    void queryClient.invalidateQueries({ queryKey: ['salon-hours'] });
-    void queryClient.invalidateQueries({ queryKey: ['working-hours'] });
-    void queryClient.invalidateQueries({ queryKey: ['schedule-exceptions'] });
-    // Zmiana grafiku zmienia wolne terminy.
-    void queryClient.invalidateQueries({ queryKey: ['slots'] });
-  };
+  return () => invalidateSchedule(queryClient);
 }
 
 export function useAddSalonHours() {

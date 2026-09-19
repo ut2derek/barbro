@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { invalidateTeam, queryKeys } from '@/lib/query-keys';
 import { getSupabase } from '@/lib/supabase';
 
 export type TeamMember = {
@@ -25,7 +26,7 @@ export type StaffServiceAssignment = {
 
 export function useTeam(salonId: string | undefined) {
   return useQuery({
-    queryKey: ['team', salonId],
+    queryKey: queryKeys.team(salonId),
     enabled: Boolean(salonId),
     queryFn: async (): Promise<TeamMember[]> => {
       const supabase = getSupabase();
@@ -60,13 +61,7 @@ export function useTeam(salonId: string | undefined) {
 function useTeamInvalidation() {
   const queryClient = useQueryClient();
 
-  return () => {
-    void queryClient.invalidateQueries({ queryKey: ['team'] });
-    void queryClient.invalidateQueries({ queryKey: ['staff'] });
-    void queryClient.invalidateQueries({ queryKey: ['staff-services'] });
-    void queryClient.invalidateQueries({ queryKey: ['services'] });
-    void queryClient.invalidateQueries({ queryKey: ['slots'] });
-  };
+  return () => invalidateTeam(queryClient);
 }
 
 export function useSaveStaff() {
@@ -126,7 +121,7 @@ export function useSaveStaff() {
 
 export function useStaffServices(args: { salonId: string | undefined; staffId: string | undefined }) {
   return useQuery({
-    queryKey: ['staff-services', args.salonId, args.staffId],
+    queryKey: queryKeys.staffServices(args.salonId, args.staffId),
     enabled: Boolean(args.salonId) && Boolean(args.staffId),
     queryFn: async (): Promise<StaffServiceAssignment[]> => {
       const supabase = getSupabase();
