@@ -1,6 +1,7 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View, type ColorValue } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -9,34 +10,23 @@ import { useCurrentSalon } from '@/features/salon/use-current-salon';
 import { t } from '@/i18n';
 import { useTheme } from '@/theme';
 
+/** Szerokość paska zgodna z treścią ekranów — na telefonie i tak zajmuje całą. */
+const MAX_BAR_WIDTH = 560;
+
+type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+/** Ikona zakładki: wypełniona, gdy zakładka jest aktywna. */
+function tabIcon(active: IconName, inactive: IconName) {
+  return function Icon({ color, focused }: { color: ColorValue; focused: boolean }) {
+    return <Ionicons name={focused ? active : inactive} size={24} color={color as string} />;
+  };
+}
+
 /**
  * Pięć zakładek ze środkowym przyciskiem akcji. Środkowy nie prowadzi do
  * ekranu — otwiera arkusz z wyborem, bo „dodaj” to dwie różne czynności:
  * wizyta i blokada czasu.
  */
-/** Kropka z liczbą wizyt czekających na decyzję barbera. */
-function PendingDot({ count }: { count: number }) {
-  const theme = useTheme();
-
-  return (
-    <View
-      style={{
-        minWidth: 20,
-        height: 20,
-        paddingHorizontal: theme.spacing.xs,
-        borderRadius: theme.radius.pill,
-        backgroundColor: theme.colors.danger,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Text variant="small" tone="onAccent" style={{ fontWeight: '700' }}>
-        {count}
-      </Text>
-    </View>
-  );
-}
-
 export default function TabsLayout() {
   const theme = useTheme();
   const router = useRouter();
@@ -55,31 +45,44 @@ export default function TabsLayout() {
           tabBarStyle: {
             backgroundColor: theme.colors.surfaceElevated,
             borderTopColor: theme.colors.border,
+            // Na szerokim ekranie pasek trzyma się tej samej szerokości
+            // co treść — rozciągnięty przez cały monitor wygląda przypadkowo.
+            width: '100%',
+            maxWidth: MAX_BAR_WIDTH,
+            alignSelf: 'center',
           },
-          tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
-          // Docelowe ikony przyjdą z designem. Do tego czasu każda zakładka
-          // rezerwuje tę samą wysokość, żeby podpisy stały w jednej linii,
-          // a kropka powiadomienia miała gdzie usiąść.
-          tabBarIcon: () => <View style={{ height: 20 }} />,
+          tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         }}
       >
         <Tabs.Screen
           name="index"
           options={{
             title: t('today.title'),
-            // Wizyty czekające na akceptację sygnalizujemy kropką z liczbą.
-            // Wbudowana kropka doczepia się do ikony, a ikon jeszcze nie mamy,
-            // więc rysujemy własną nad podpisem.
-            tabBarIcon: () =>
-              pending > 0 ? <PendingDot count={pending} /> : <View style={{ height: 20 }} />,
+            tabBarIcon: tabIcon('today', 'today-outline'),
+            // Liczba wizyt czekających na decyzję barbera.
+            tabBarBadge: pending > 0 ? pending : undefined,
+            tabBarBadgeStyle: {
+              backgroundColor: theme.colors.danger,
+              color: theme.colors.textOnAccent,
+              fontSize: 11,
+            },
             tabBarAccessibilityLabel:
               pending > 0 ? t('today.pendingAccessibility', { count: pending }) : t('today.title'),
           }}
         />
-        <Tabs.Screen name="calendar" options={{ title: t('calendar.title') }} />
+        <Tabs.Screen
+          name="calendar"
+          options={{
+            title: t('calendar.title'),
+            tabBarIcon: tabIcon('calendar', 'calendar-outline'),
+          }}
+        />
         <Tabs.Screen
           name="new"
-          options={{ title: t('navigation.add') }}
+          options={{
+            title: t('navigation.add'),
+            tabBarIcon: tabIcon('add-circle', 'add-circle-outline'),
+          }}
           listeners={{
             tabPress: (event) => {
               // Zamiast przechodzić na ekran, otwieramy wybór akcji.
@@ -88,8 +91,20 @@ export default function TabsLayout() {
             },
           }}
         />
-        <Tabs.Screen name="clients" options={{ title: t('clients.title') }} />
-        <Tabs.Screen name="more" options={{ title: t('navigation.more') }} />
+        <Tabs.Screen
+          name="clients"
+          options={{
+            title: t('clients.title'),
+            tabBarIcon: tabIcon('people', 'people-outline'),
+          }}
+        />
+        <Tabs.Screen
+          name="more"
+          options={{
+            title: t('navigation.more'),
+            tabBarIcon: tabIcon('ellipsis-horizontal', 'ellipsis-horizontal-outline'),
+          }}
+        />
       </Tabs>
 
       <Modal
@@ -107,6 +122,7 @@ export default function TabsLayout() {
             onPress={() => setActionsOpen(false)}
             style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.overlay }]}
           />
+
           <View
             style={{
               backgroundColor: theme.colors.surfaceElevated,
@@ -115,6 +131,9 @@ export default function TabsLayout() {
               padding: theme.spacing.lg,
               gap: theme.spacing.md,
               paddingBottom: theme.spacing.xxl,
+              width: '100%',
+              maxWidth: MAX_BAR_WIDTH,
+              alignSelf: 'center',
             }}
           >
             <Text variant="heading">{t('navigation.addTitle')}</Text>
