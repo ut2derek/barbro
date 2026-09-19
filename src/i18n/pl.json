@@ -30,7 +30,13 @@
     "passwordsDiffer": "Hasła nie są takie same.",
     "savePassword": "Zapisz hasło",
     "resetFailed": "Nie udało się zmienić hasła. Spróbuj ponownie.",
-    "resetLinkExpired": "Link wygasł albo został już użyty. Poproś o nowy."
+    "resetLinkExpired": "Link wygasł albo został już użyty. Poproś o nowy.",
+    "testAccounts": "Konta testowe",
+    "testAccountsHint": "Widoczne tylko w trybie deweloperskim. Hasło każdego z nich to haslo123.",
+    "testOwner": "Zaloguj jako właściciel salonu",
+    "testStaff": "Zaloguj jako pracownik",
+    "testAdmin": "Zaloguj jako administrator platformy",
+    "testAccountsMissing": "Nie ma takiego konta. Uruchom „npm run db:reset”, żeby wgrać dane testowe."
   },
   "today": {
     "title": "Dziś",

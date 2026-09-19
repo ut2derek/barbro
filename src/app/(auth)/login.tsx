@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
@@ -10,6 +11,17 @@ import { t } from '@/i18n';
 import { useAuth } from '@/lib/auth';
 import { isSupabaseConfigured } from '@/lib/env';
 import { useTheme } from '@/theme';
+
+/**
+ * Konta z danych testowych (supabase/seed.sql). Panel pokazuje się wyłącznie
+ * w trybie deweloperskim — w wersji dla sklepów tego kodu nie ma, bo __DEV__
+ * jest wtedy fałszem i cały blok wypada przy budowaniu.
+ */
+const TEST_ACCOUNTS = [
+  { email: 'wlasciciel@barbro.test', labelKey: 'auth.testOwner' },
+  { email: 'pracownik@barbro.test', labelKey: 'auth.testStaff' },
+  { email: 'admin@barbro.test', labelKey: 'auth.testAdmin' },
+] as const;
 
 export default function LoginScreen() {
   const theme = useTheme();
@@ -85,6 +97,34 @@ export default function LoginScreen() {
             onPress={() => router.push('/(auth)/forgot-password')}
           />
         </View>
+
+        {__DEV__ ? (
+          <Card>
+            <Text variant="heading">{t('auth.testAccounts')}</Text>
+            <Text variant="small" tone="muted">
+              {t('auth.testAccountsHint')}
+            </Text>
+            {TEST_ACCOUNTS.map((account) => (
+              <Button
+                key={account.email}
+                label={t(account.labelKey as 'auth.testOwner')}
+                variant="secondary"
+                disabled={busy}
+                onPress={async () => {
+                  setError(null);
+                  setBusy(true);
+                  try {
+                    await signIn(account.email, 'haslo123');
+                  } catch {
+                    setError(t('auth.testAccountsMissing'));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              />
+            ))}
+          </Card>
+        ) : null}
 
         {!isSupabaseConfigured ? (
           <Text tone="danger" variant="small">
