@@ -1,11 +1,10 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loading } from '@/components/ui/loading';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
@@ -15,90 +14,60 @@ import {
   useStaffServices,
   useTeam,
   useToggleStaffService,
-  type StaffServiceAssignment,
-  type TeamMember,
 } from '@/features/team/queries';
 import { t } from '@/i18n';
-import { formatGroszForInput, formatPrice } from '@/lib/format';
+import { formatPrice } from '@/lib/format';
 import { useTheme } from '@/theme';
 
-/**
- * Nadpisanie ceny może być puste (= bierzemy cenę z cennika), więc pusty tekst
- * i tekst nieprawidłowy to dwie różne odpowiedzi: `null` i `NaN`.
- */
-function parseOverridePrice(value: string): number | null {
+function toGrosz(value: string): number | null {
   const normalized = value.replace(',', '.').trim();
   if (normalized === '') return null;
   if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return Number.NaN;
   return Math.round(Number(normalized) * 100);
 }
 
-/**
- * Ekran ładuje dane, formularz je dostaje. Formularz montuje się raz, więc
- * ponowne pobranie składu zespołu nie kasuje wpisanych zmian — wcześniej
- * robiły to dwa `useEffect`.
- */
 export default function TeamMemberScreen() {
+  const theme = useTheme();
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const isNew = id === 'new';
 
   const { data: salon } = useCurrentSalon();
-  const { data: team, isPending } = useTeam(salon?.salonId);
-  const { data: assignments, isPending: assignmentsPending } = useStaffServices({
+  const { data: team } = useTeam(salon?.salonId);
+  const { data: assignments } = useStaffServices({
     salonId: salon?.salonId,
     staffId: isNew ? undefined : id,
   });
 
-  const existing = isNew ? undefined : team?.find((member) => member.id === id);
-
-  if (!salon || (!isNew && (isPending || assignmentsPending))) return <Loading />;
-
-  return (
-    <TeamMemberForm
-      key={existing?.id ?? 'new'}
-      salonId={salon.salonId}
-      staffId={isNew ? undefined : id}
-      existing={existing}
-      assignments={assignments ?? []}
-      teamSize={team?.length ?? 0}
-    />
-  );
-}
-
-function TeamMemberForm({
-  salonId,
-  staffId,
-  existing,
-  assignments,
-  teamSize,
-}: {
-  salonId: string;
-  staffId: string | undefined;
-  existing: TeamMember | undefined;
-  assignments: StaffServiceAssignment[];
-  teamSize: number;
-}) {
-  const theme = useTheme();
-  const router = useRouter();
   const saveStaff = useSaveStaff();
   const toggleService = useToggleStaffService();
   const setOverride = useSetStaffServiceOverride();
 
-  const isNew = staffId === undefined;
+  const existing = isNew ? undefined : team?.find((member) => member.id === id);
 
-  const [displayName, setDisplayName] = useState(existing?.displayName ?? '');
-  const [bio, setBio] = useState(existing?.bio ?? '');
-  const [active, setActive] = useState(existing?.active ?? true);
+  const [displayName, setDisplayName] = useState('');
+  const [bio, setBio] = useState('');
+  const [active, setActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [overrides, setOverrides] = useState<Record<string, { price: string; duration: string }>>(
-    () =>
+  const [overrides, setOverrides] = useState<Record<string, { price: string; duration: string }>>({});
+
+  useEffect(() => {
+    if (!existing) return;
+    setDisplayName(existing.displayName);
+    setBio(existing.bio ?? '');
+    setActive(existing.active);
+  }, [existing]);
+
+  useEffect(() => {
+    if (!assignments) return;
+    setOverrides(
       Object.fromEntries(
         assignments.map((assignment) => [
           assignment.serviceId,
           {
             price:
               assignment.priceOverrideGrosz !== null
-                ? formatGroszForInput(assignment.priceOverrideGrosz)
+                ? (assignment.priceOverrideGrosz / 100).toFixed(2).replace('.', ',')
                 : '',
             duration:
               assignment.durationOverrideMinutes !== null
@@ -107,7 +76,8 @@ function TeamMemberForm({
           },
         ]),
       ),
-  );
+    );
+  }, [assignments]);
 
   async function save() {
     setError(null);
@@ -118,17 +88,17 @@ function TeamMemberForm({
     }
 
     try {
-      const savedId = await saveStaff.mutateAsync({
-        salonId,
-        id: staffId,
+      const staffId = await saveStaff.mutateAsync({
+        salonId: salon!.salonId,
+        id: isNew ? undefined : id,
         displayName,
         bio,
         active,
-        sortOrder: isNew ? teamSize + 1 : undefined,
+        sortOrder: isNew ? (team?.length ?? 0) + 1 : undefined,
       });
 
       if (isNew) {
-        router.replace(`/(app)/team/${savedId}`);
+        router.replace(`/(app)/team/${staffId}`);
       } else {
         router.replace('/(app)/team');
       }
@@ -139,7 +109,7 @@ function TeamMemberForm({
 
   async function saveOverride(serviceId: string) {
     const values = overrides[serviceId];
-    const priceGrosz = parseOverridePrice(values?.price ?? '');
+    const priceGrosz = toGrosz(values?.price ?? '');
     const durationText = (values?.duration ?? '').trim();
     const durationMinutes = durationText === '' ? null : Number(durationText);
 
@@ -148,14 +118,12 @@ function TeamMemberForm({
       return setError(t('teamForm.badDuration'));
 
     setError(null);
-    await setOverride.mutateAsync({ staffId: staffId!, serviceId, priceGrosz, durationMinutes });
+    await setOverride.mutateAsync({ staffId: id, serviceId, priceGrosz, durationMinutes });
   }
 
   return (
     <Screen scroll>
-      <Stack.Screen
-        options={{ title: isNew ? t('teamForm.newTitle') : t('teamForm.editTitle') }}
-      />
+      <Text variant="title">{isNew ? t('teamForm.newTitle') : t('teamForm.editTitle')}</Text>
 
       <Input label={t('teamForm.name')} value={displayName} onChangeText={setDisplayName} />
       <Input
@@ -193,15 +161,15 @@ function TeamMemberForm({
             {t('teamForm.servicesHint')}
           </Text>
 
-          {assignments.map((assignment) => (
+          {(assignments ?? []).map((assignment) => (
             <Card key={assignment.serviceId}>
               <Pressable
                 accessibilityRole="checkbox"
                 accessibilityState={{ checked: assignment.assigned }}
                 onPress={() =>
                   toggleService.mutate({
-                    salonId,
-                    staffId: staffId!,
+                    salonId: salon!.salonId,
+                    staffId: id,
                     serviceId: assignment.serviceId,
                     assign: !assignment.assigned,
                   })
@@ -224,8 +192,8 @@ function TeamMemberForm({
                   value={assignment.assigned}
                   onValueChange={(assign) =>
                     toggleService.mutate({
-                      salonId,
-                      staffId: staffId!,
+                      salonId: salon!.salonId,
+                      staffId: id,
                       serviceId: assignment.serviceId,
                       assign,
                     })
@@ -284,6 +252,11 @@ function TeamMemberForm({
         </>
       ) : null}
 
+      <Button
+        label={t('common.back')}
+        variant="secondary"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/team'))}
+      />
     </Screen>
   );
 }

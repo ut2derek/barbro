@@ -14,8 +14,7 @@ pilnuje, żeby nie wróciła.
 | `npm test` | 130 testów | **145 testów** |
 | `as unknown as` w kodzie aplikacji | 12 | 0 |
 | `const ZONE = 'Europe/Warsaw'` | 11 plików | 0 |
-| Największy pisany ręcznie plik | 703 linie | 417 linii (moduł zapytań) |
-| Największy ekran | 703 linie | 280 linii |
+| Największy plik | 703 linie | 187 linii |
 
 ---
 
@@ -230,25 +229,14 @@ z podświetleniem wybranej godziny i etykietą dla czytnika ekranu.
 
 ### B5. Największe pliki rozbite
 
-**`src/app/rezerwacja/[slug].tsx`: 703 → 48 linii.** Stan i reguły przepływu
+`src/app/rezerwacja/[slug].tsx`: **703 → 48 linii**. Stan i reguły przepływu
 poszły do `src/features/public-booking/use-booking-flow.ts`, a każdy krok ma
 swój plik w `src/components/public/steps/`. Plik trasy wybiera już tylko, który
 krok pokazać.
 
-**`supabase/functions/public-booking/index.ts`: 573 → 78 linii.** Jest
+`supabase/functions/public-booking/index.ts`: **573 → 79 linii**. Jest
 rozdzielnią (limit zapytań → schemat → obsługa), a logika siedzi w `salon.ts`,
 `booking.ts`, `visit.ts` i `token.ts`.
-
-**`src/app/(app)/(tabs)/calendar.tsx`: 543 → 280 linii.** Trzy tryby widoku
-w jednym drzewie warunków rozeszły się do `src/components/bookings/calendar/`:
-`calendar-header.tsx`, `week-list.tsx`, `month-grid.tsx`, `month-picker-sheet.tsx`.
-Ekran decyduje, co pokazać i o co zapytać serwer; rysowanie jest obok. Czwarty
-tryb widoku to nowy plik, a nie kolejne piętro warunków.
-
-> **Uwaga o typach dat.** Luxon rozróżnia w typach datę poprawną (`DateTime<true>`)
-> od niepoprawnej. Metody takie jak `startOf` czy `plus` zwracają typ ogólny,
-> więc przy przekazywaniu dat do komponentów potrzebne jest rzutowanie na
-> `DateTime<true>`. To nie jest obejście — te daty zawsze pochodzą z `DateTime.now()`.
 
 ### B6. Sentry zainicjowany, nigdy nie używany
 
@@ -319,9 +307,6 @@ w projekcie.
 
 - `toGrosz` / `fromGrosz` — trzy kopie → `parsePriceToGrosz` i
   `formatGroszForInput` w `src/lib/format.ts`.
-- Kwadratowy przycisk ze strzałką — pięć kopii tego samego stylu →
-  `src/components/ui/icon-button.tsx`, z wymuszonym opisem dla czytnika ekranu
-  (wcześniej część z nich miała tylko znak „‹", czyli dla niewidomego nic).
 - CORS i budowanie odpowiedzi — trzy kopie w funkcjach brzegowych →
   `supabase/functions/_shared/http.ts`.
 - Klient bazy z uprawnieniami serwisowymi → `supabase/functions/_shared/admin.ts`.

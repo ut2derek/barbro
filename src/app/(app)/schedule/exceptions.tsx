@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -10,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useSalonStaff } from '@/features/bookings/queries';
-import { useCurrentSalon, useMyStaffId } from '@/features/salon/use-current-salon';
+import { useCurrentSalon } from '@/features/salon/use-current-salon';
 import {
   useAddScheduleException,
   useRemoveScheduleException,
@@ -18,23 +19,22 @@ import {
 } from '@/features/schedule/queries';
 import { t } from '@/i18n';
 import { useTheme } from '@/theme';
-import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 
+const ZONE = 'Europe/Warsaw';
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Urlopy, dni wolne i dni z innymi godzinami. */
 export default function ExceptionsScreen() {
-  const zone = useSalonTimezone();
   const theme = useTheme();
+  const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: staff } = useSalonStaff(salon?.salonId);
-  const { data: myStaffId } = useMyStaffId();
   const { data: exceptions } = useScheduleExceptions(salon?.salonId);
 
   const addException = useAddScheduleException();
   const removeException = useRemoveScheduleException();
 
-  const today = DateTime.now().setZone(zone).toFormat('yyyy-MM-dd');
+  const today = DateTime.now().setZone(ZONE).toFormat('yyyy-MM-dd');
 
   const [scope, setScope] = useState<'staff' | 'salon'>('staff');
   const [staffId, setStaffId] = useState<string | null>(null);
@@ -46,8 +46,8 @@ export default function ExceptionsScreen() {
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  const effectiveStaffId = staffId ?? staff?.[0]?.id ?? null;
   const isOwner = salon?.role === 'owner';
-  const effectiveStaffId = isOwner ? (staffId ?? staff?.[0]?.id ?? null) : myStaffId ?? null;
 
   async function save() {
     setError(null);
@@ -80,6 +80,7 @@ export default function ExceptionsScreen() {
 
   return (
     <Screen scroll>
+      <Text variant="title">{t('exceptions.title')}</Text>
       <Text tone="secondary">{t('exceptions.description')}</Text>
 
       {(exceptions ?? []).length > 0 ? (
@@ -135,7 +136,7 @@ export default function ExceptionsScreen() {
           </View>
         ) : null}
 
-        {isOwner && scope === 'staff' && staff && staff.length > 1 ? (
+        {scope === 'staff' && staff && staff.length > 1 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
             <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
               {staff.map((member) => (
@@ -205,6 +206,11 @@ export default function ExceptionsScreen() {
         <Button label={t('exceptions.add')} loading={addException.isPending} onPress={() => void save()} />
       </Card>
 
+      <Button
+        label={t('common.back')}
+        variant="secondary"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/schedule'))}
+      />
     </Screen>
   );
 }

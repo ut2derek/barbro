@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -18,6 +19,7 @@ import { useTheme } from '@/theme';
 /** Kategorie porządkują cennik — „Strzyżenie”, „Broda”, „Koloryzacja”. */
 export default function CategoriesScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: categories } = useServiceCategories(salon?.salonId);
 
@@ -29,6 +31,7 @@ export default function CategoriesScreen() {
 
   return (
     <Screen scroll>
+      <Text variant="title">{t('categories.title')}</Text>
       <Text tone="secondary">{t('categories.description')}</Text>
 
       {(categories ?? []).map((category, index) => (
@@ -87,6 +90,11 @@ export default function CategoriesScreen() {
         {t('categories.deleteNote')}
       </Text>
 
+      <Button
+        label={t('common.back')}
+        variant="secondary"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/services'))}
+      />
     </Screen>
   );
 }

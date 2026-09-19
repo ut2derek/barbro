@@ -1,14 +1,14 @@
-import { DateTime } from 'luxon';
+import type { DateTime } from 'luxon';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { Text } from '@/components/ui/text';
 import { useTheme } from '@/theme';
 
 type Props = {
-  from: DateTime<true>;
+  from: DateTime;
   days: number;
-  selected: DateTime<true>;
-  onSelect: (day: DateTime<true>) => void;
+  selected: DateTime;
+  onSelect: (day: DateTime) => void;
 };
 
 /**
@@ -21,7 +21,7 @@ export function DayStrip({ from, days, selected, onSelect }: Props) {
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
       <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
-        {Array.from({ length: days }, (_, index) => from.plus({ days: index }) as DateTime<true>).map((day) => {
+        {Array.from({ length: days }, (_, index) => from.plus({ days: index })).map((day) => {
           const isSelected = day.hasSame(selected, 'day');
 
           return (

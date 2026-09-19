@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { t } from '@/i18n';
-import { useIsAppAdmin } from '@/features/admin/queries';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/theme';
 
@@ -20,7 +19,6 @@ export default function AccountScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { user, signOut, deleteAccount } = useAuth();
-  const { data: isAppAdmin } = useIsAppAdmin();
 
   const [confirmation, setConfirmation] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -48,29 +46,10 @@ export default function AccountScreen() {
 
   return (
     <Screen scroll>
-      <Text tone="secondary">{user?.email}</Text>
-
-      <Button
-        label={t('schedule.title')}
-        variant="secondary"
-        onPress={() => router.push('/(app)/schedule')}
-      />
-
-      <Button
-        label={t('team.title')}
-        variant="secondary"
-        onPress={() => router.push('/(app)/team')}
-      />
-
-      <Button
-        label={t('settings.title')}
-        variant="secondary"
-        onPress={() => router.push('/(app)/settings')}
-      />
-
-      {isAppAdmin ? (
-        <Button label={t('admin.title')} variant="secondary" onPress={() => router.push('/(app)/admin')} />
-      ) : null}
+      <View style={{ gap: theme.spacing.xs }}>
+        <Text variant="title">{t('account.title')}</Text>
+        <Text tone="secondary">{user?.email}</Text>
+      </View>
 
       <Button label={t('account.signOut')} variant="secondary" onPress={() => void signOut()} />
 
@@ -103,6 +82,7 @@ export default function AccountScreen() {
         />
       </Card>
 
+      <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
     </Screen>
   );
 }

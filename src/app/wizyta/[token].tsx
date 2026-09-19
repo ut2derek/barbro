@@ -5,9 +5,7 @@ import { View } from 'react-native';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
-import { Stars } from '@/components/ui/stars';
 import { Text } from '@/components/ui/text';
 import { statusLabel, statusTone } from '@/features/bookings/status';
 import type { BookingStatus } from '@/features/bookings/queries';
@@ -15,8 +13,6 @@ import {
   useCancelBookingByToken,
   useConfirmBookingByToken,
   usePublicBookingByToken,
-  useReviewState,
-  useSubmitReview,
 } from '@/features/public-booking/queries';
 import { t } from '@/i18n';
 import { formatFullDate, formatPrice, formatTimeRange } from '@/lib/format';
@@ -33,19 +29,13 @@ export default function ClientBookingScreen() {
   const { data, isPending, error, refetch } = usePublicBookingByToken(token);
   const confirm = useConfirmBookingByToken();
   const cancel = useCancelBookingByToken();
-  const { data: reviewState, refetch: refetchReview } = useReviewState(token);
-  const submitReview = useSubmitReview();
-
-  const [rating, setRating] = useState<number | null>(null);
-  const [reviewComment, setReviewComment] = useState('');
-  const [reviewError, setReviewError] = useState<string | null>(null);
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   if (isPending) {
     return (
-      <Screen edges={['top', 'bottom']}>
+      <Screen>
         <Text tone="muted">{t('common.loading')}</Text>
       </Screen>
     );
@@ -53,7 +43,7 @@ export default function ClientBookingScreen() {
 
   if (error || !data) {
     return (
-      <Screen edges={['top', 'bottom']}>
+      <Screen>
         <Text variant="title">{t('clientBooking.invalidTitle')}</Text>
         <Text tone="secondary">{t('clientBooking.invalidDescription')}</Text>
       </Screen>
@@ -81,7 +71,7 @@ export default function ClientBookingScreen() {
   }
 
   return (
-    <Screen scroll edges={['top', 'bottom']}>
+    <Screen scroll>
       <View style={{ gap: theme.spacing.xxs }}>
         <Text variant="display">{booking.salonName}</Text>
         <Text tone="secondary">
@@ -128,61 +118,6 @@ export default function ClientBookingScreen() {
       )}
 
       {actionError ? <Text tone="danger">{actionError}</Text> : null}
-
-      {/* Opinię wystawia się dopiero po wizycie — wcześniej nie ma o czym pisać. */}
-      {reviewState?.canReview ? (
-        <Card>
-          <Text variant="heading">{t('reviews.rateVisitTitle')}</Text>
-          <Text tone="secondary" variant="small">
-            {t('reviews.rateVisitDescription')}
-          </Text>
-
-          <Stars value={rating} onChange={setRating} size="large" count={null} />
-
-          <Input
-            label={t('reviews.comment')}
-            value={reviewComment}
-            onChangeText={setReviewComment}
-            multiline
-            numberOfLines={3}
-            placeholder={t('reviews.commentPlaceholder')}
-          />
-
-          {reviewError ? <Text tone="danger">{reviewError}</Text> : null}
-
-          <Button
-            label={t('reviews.submit')}
-            loading={submitReview.isPending}
-            onPress={async () => {
-              setReviewError(null);
-              if (!rating) {
-                setReviewError(t('reviews.pickRating'));
-                return;
-              }
-              try {
-                await submitReview.mutateAsync({ token, rating, comment: reviewComment });
-                await refetchReview();
-              } catch (cause) {
-                setReviewError((cause as Error).message || t('reviews.submitError'));
-              }
-            }}
-          />
-        </Card>
-      ) : reviewState?.review ? (
-        <Card>
-          <Text variant="heading">{t('reviews.yourReview')}</Text>
-          <Stars value={reviewState.review.rating} count={null} />
-          {reviewState.review.comment ? <Text>{reviewState.review.comment}</Text> : null}
-          {reviewState.review.salonReply ? (
-            <>
-              <Text variant="label" tone="secondary">
-                {t('reviews.salonReply')}
-              </Text>
-              <Text variant="small">{reviewState.review.salonReply}</Text>
-            </>
-          ) : null}
-        </Card>
-      ) : null}
 
       {booking.canCancel ? (
         cancelling ? (

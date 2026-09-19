@@ -2,10 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { UndoProvider } from '@/components/ui/undo-toast';
 import { AuthProvider } from '@/lib/auth';
 import { queryClient } from '@/lib/query-client';
 import { initSentry } from '@/lib/sentry';
@@ -40,20 +37,14 @@ function NavigationTheme({ children }: { children: ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <AppThemeProvider>
-              <NavigationTheme>
-                <UndoProvider>
-                  <Stack screenOptions={{ headerShown: false }} />
-                </UndoProvider>
-              </NavigationTheme>
-            </AppThemeProvider>
-          </AuthProvider>
-        </QueryClientProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AppThemeProvider>
+          <NavigationTheme>
+            <Stack screenOptions={{ headerShown: false }} />
+          </NavigationTheme>
+        </AppThemeProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

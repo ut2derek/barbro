@@ -4,7 +4,7 @@ import { useTheme, type TypographyVariant } from '@/theme';
 
 type Props = RNTextProps & {
   variant?: TypographyVariant;
-  tone?: 'primary' | 'secondary' | 'muted' | 'accent' | 'danger' | 'warning' | 'success' | 'onAccent';
+  tone?: 'primary' | 'secondary' | 'muted' | 'accent' | 'danger' | 'success' | 'onAccent';
 };
 
 export function Text({ variant = 'body', tone = 'primary', style, ...rest }: Props) {
@@ -16,7 +16,6 @@ export function Text({ variant = 'body', tone = 'primary', style, ...rest }: Pro
     muted: theme.colors.textMuted,
     accent: theme.colors.accent,
     danger: theme.colors.danger,
-    warning: theme.colors.warning,
     success: theme.colors.success,
     onAccent: theme.colors.textOnAccent,
   }[tone];

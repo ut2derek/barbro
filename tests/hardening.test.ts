@@ -186,10 +186,6 @@ describe('limit zapytań chroni przed botami', () => {
 
     const db = new Client({ connectionString: CONNECTION_STRING });
     await db.connect();
-    await db.query(
-      `delete from public.bookings where client_id in
-       (select id from public.clients where email like 'bot-%@example.test')`,
-    );
     await db.query("delete from public.clients where email like 'bot-%@example.test'");
     await db.end();
   });

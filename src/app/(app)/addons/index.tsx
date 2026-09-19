@@ -23,7 +23,9 @@ export default function AddonsScreen() {
   if (salon && salon.role !== 'owner') {
     return (
       <Screen>
-          <Text tone="secondary">{t('addonsAdmin.ownerOnly')}</Text>
+        <Text variant="title">{t('addonsAdmin.title')}</Text>
+        <Text tone="secondary">{t('addonsAdmin.ownerOnly')}</Text>
+        <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
       </Screen>
     );
   }
@@ -51,7 +53,7 @@ export default function AddonsScreen() {
   return (
     <Screen scroll>
       <Text variant="title">{t('addonsAdmin.title')}</Text>
-      <Text tone="secondary">{t('addonsAdmin.intro')}</Text>
+      <Text tone="secondary">{t('addonsAdmin.description')}</Text>
 
       {isPending ? (
         <Text tone="muted">{t('common.loading')}</Text>
@@ -111,6 +113,11 @@ export default function AddonsScreen() {
 
       <Button label={t('addonsAdmin.add')} onPress={() => router.push('/(app)/addons/new')} />
 
+      <Button
+        label={t('common.back')}
+        variant="secondary"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/services'))}
+      />
     </Screen>
   );
 }

@@ -19,11 +19,11 @@ export function WeekList({
   onQuickAction,
   onCancel,
 }: {
-  weekStart: DateTime<true>;
+  weekStart: DateTime;
   zone: string;
   showStaff: boolean;
-  bookingsOf: (day: DateTime<true>) => BookingListItem[];
-  onOpenDay: (day: DateTime<true>) => void;
+  bookingsOf: (day: DateTime) => BookingListItem[];
+  onOpenDay: (day: DateTime) => void;
   onOpenBooking: (booking: BookingListItem) => void;
   onQuickAction: (booking: BookingListItem, status: BookingStatus, label: string) => void;
   onCancel: (booking: BookingListItem) => void;

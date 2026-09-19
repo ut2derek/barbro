@@ -60,7 +60,9 @@ export default function ServicesScreen() {
         }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
       >
-          {isPending ? (
+        <Text variant="display">{t('services.title')}</Text>
+
+        {isPending ? (
           <Text tone="muted">{t('common.loading')}</Text>
         ) : groups.length === 0 ? (
           <Card>
@@ -165,11 +167,6 @@ export default function ServicesScreen() {
               label={t('services.manageCategories')}
               variant="secondary"
               onPress={() => router.push('/(app)/services/categories')}
-            />
-            <Button
-              label={t('addonsAdmin.title')}
-              variant="secondary"
-              onPress={() => router.push('/(app)/addons')}
             />
           </>
         ) : null}

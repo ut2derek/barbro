@@ -10,14 +10,7 @@ import { z } from 'npm:zod@^4.6.5';
 /** Slug salonu z adresu strony: małe litery, cyfry i myślniki. */
 const slug = z.string().trim().min(1).max(120).regex(/^[a-z0-9-]+$/, 'Nieprawidłowy adres salonu');
 
-/**
- * Identyfikator z bazy. Celowo nie `z.uuid()`: ta funkcja wymaga numeru
- * w wersji 4, a nasze dane testowe (i każdy identyfikator nadany ręcznie)
- * mają wersję zerową. Sprawdzamy kształt, bo o kształt tu chodzi.
- */
-const uuid = z
-  .string()
-  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, 'Nieprawidłowy identyfikator');
+const uuid = z.string().uuid();
 
 /** Token z linku w mailu — 24 bajty zapisane szesnastkowo. */
 const token = z.string().regex(/^[0-9a-f]{48}$/, 'Nieprawidłowy link');

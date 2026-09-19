@@ -154,7 +154,9 @@ $$;
 
 -- --- wolne terminy ---
 --
--- Ta sama funkcja co dotąd, z jednym warunkiem dołożonym na samym wejściu.
+-- Funkcja jest długa i nie chcemy jej przepisywać dla jednego warunku, więc
+-- dokładamy sprawdzenie na wejściu, zaraz obok istniejącego sprawdzenia, czy
+-- salon jest włączony. Reszta ciała pozostaje bez zmian.
 
 create or replace function public.get_available_slots(
   p_salon_id uuid,
@@ -180,9 +182,7 @@ declare
   v_today date;
   v_extra integer := greatest(coalesce(p_extra_minutes, 0), 0);
 begin
-  -- Cudzy salon nie odpowiada nic — tak samo, jakby nie istniał. Funkcja jest
-  -- `security definer`, czyli obchodzi reguły dostępu, więc sprawdzenie musi
-  -- stać tutaj, w pierwszej linijce ciała.
+  -- Cudzy salon nie odpowiada nic — tak samo, jakby nie istniał.
   if not public.caller_may_read_salon(p_salon_id) then
     return;
   end if;
@@ -200,138 +200,11 @@ begin
     return;
   end if;
 
-  if exists (
-    select 1 from unnest(p_service_ids) as requested(service_id)
-    where not exists (
-      select 1 from public.services sv
-      where sv.id = requested.service_id and sv.salon_id = p_salon_id
-    )
-  ) then
-    return;
-  end if;
-
-  v_today := (v_now at time zone v_tz)::date;
-
   return query
-  with wanted as (
-    select o.service_id, o.pos, sv.duration_minutes, sv.buffer_after_minutes
-    from unnest(p_service_ids) with ordinality as o(service_id, pos)
-    join public.services sv on sv.id = o.service_id
-  ),
-  candidates as (
-    select st.id as staff_id
-    from public.staff st
-    where st.salon_id = p_salon_id
-      and st.active
-      and (p_staff_id is null or st.id = p_staff_id)
-      and (select count(distinct w.service_id) from wanted w) = (
-        select count(distinct ss.service_id)
-        from public.staff_services ss
-        where ss.staff_id = st.id
-          and ss.service_id in (select w.service_id from wanted w)
-      )
-  ),
-  durations as (
-    select
-      c.staff_id,
-      (
-        select sum(coalesce(ss.duration_minutes_override, w.duration_minutes))::int
-        from wanted w
-        left join public.staff_services ss
-          on ss.staff_id = c.staff_id and ss.service_id = w.service_id
-      ) + v_extra as visit_minutes,
-      (select w.buffer_after_minutes from wanted w order by w.pos desc limit 1) as buffer_minutes
-    from candidates c
-  ),
-  days as (
-    select d::date as day
-    from generate_series(
-      greatest(p_from, v_today)::timestamp,
-      p_to::timestamp,
-      interval '1 day'
-    ) as d
-  ),
-  staff_days as (
-    select dur.staff_id, dd.day, dur.visit_minutes, dur.buffer_minutes
-    from durations dur
-    cross join days dd
-    where dur.visit_minutes is not null
-      and not exists (
-        select 1 from public.schedule_exceptions e
-        where e.salon_id = p_salon_id
-          and e.exception_type = 'day_off'
-          and (e.staff_id is null or e.staff_id = dur.staff_id)
-          and dd.day between e.starts_on and e.ends_on
-      )
-  ),
-  custom_windows as (
-    select sd.staff_id, sd.day, e.start_time, e.end_time
-    from staff_days sd
-    join public.schedule_exceptions e
-      on e.salon_id = p_salon_id
-     and e.exception_type = 'custom_hours'
-     and (e.staff_id is null or e.staff_id = sd.staff_id)
-     and sd.day between e.starts_on and e.ends_on
-  ),
-  regular_windows as (
-    select sd.staff_id, sd.day, wh.start_time, wh.end_time
-    from staff_days sd
-    join public.working_hours wh
-      on wh.staff_id = sd.staff_id
-     and wh.weekday = extract(isodow from sd.day)::smallint
-    where not exists (
-      select 1 from custom_windows cw
-      where cw.staff_id = sd.staff_id and cw.day = sd.day
-    )
-  ),
-  staff_windows as (
-    select * from custom_windows
-    union all
-    select * from regular_windows
-  ),
-  open_windows as (
-    select
-      sw.staff_id,
-      sw.day,
-      greatest(sw.start_time, sh.open_time) as start_time,
-      least(sw.end_time, sh.close_time) as end_time
-    from staff_windows sw
-    join public.salon_hours sh
-      on sh.salon_id = p_salon_id
-     and sh.weekday = extract(isodow from sw.day)::smallint
-    where greatest(sw.start_time, sh.open_time) < least(sw.end_time, sh.close_time)
-  ),
-  candidate_slots as (
-    select
-      ow.staff_id,
-      (gs at time zone v_tz) as slot_start,
-      ((gs + make_interval(mins => sd.visit_minutes)) at time zone v_tz) as slot_end,
-      ((gs + make_interval(mins => sd.visit_minutes + coalesce(sd.buffer_minutes, 0))) at time zone v_tz) as block_end
-    from open_windows ow
-    join staff_days sd on sd.staff_id = ow.staff_id and sd.day = ow.day
-    cross join lateral generate_series(
-      ow.day + ow.start_time,
-      ow.day + ow.end_time - make_interval(mins => sd.visit_minutes),
-      make_interval(mins => v_step)
-    ) as gs
-  )
-  select distinct cs.slot_start, cs.slot_end, cs.staff_id
-  from candidate_slots cs
-  where
-    cs.slot_start >= v_now + make_interval(mins => v_min_lead)
-    and (cs.slot_start at time zone v_tz)::date <= v_today + v_horizon
-    and not exists (
-      select 1 from public.bookings b
-      where b.staff_id = cs.staff_id
-        and b.status in ('pending_confirmation', 'pending_approval', 'confirmed', 'completed')
-        and b.time_range && tstzrange(cs.slot_start, cs.block_end, '[)')
-    )
-    and not exists (
-      select 1 from public.time_blocks tb
-      where tb.staff_id = cs.staff_id
-        and tstzrange(tb.starts_at, tb.ends_at, '[)') && tstzrange(cs.slot_start, cs.block_end, '[)')
-    )
-  order by cs.slot_start, cs.staff_id;
+  select q.slot_start, q.slot_end, q.staff_id
+  from public.available_slots_unchecked(
+    p_salon_id, p_service_ids, p_from, p_to, p_staff_id, v_extra
+  ) q;
 end;
 $$;
 

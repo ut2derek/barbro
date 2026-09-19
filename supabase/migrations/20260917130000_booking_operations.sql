@@ -9,53 +9,6 @@
 -- w cudzym salonie.
 
 -- ---------------------------------------------------------------------------
--- Pozycje rezerwacji wyliczone dla konkretnego fryzjera
---
--- Osobna funkcja, żeby ta sama definicja obsłużyła i wyliczenie sumy, i zapis
--- pozycji — bez ryzyka, że oba miejsca się rozjadą.
--- ---------------------------------------------------------------------------
-
-create or replace function public.booking_item_lines(
-  p_salon_id uuid,
-  p_staff_id uuid,
-  p_service_ids uuid[]
-)
-returns table (
-  service_id uuid,
-  item_order smallint,
-  name_snapshot text,
-  price_grosz integer,
-  duration_minutes integer,
-  buffer_after_minutes integer
-)
-language sql
-stable
-security invoker
-set search_path = public, pg_temp
-as $$
-  select
-    sv.id,
-    requested.ord::smallint,
-    sv.name,
-    coalesce(
-      ss.price_grosz_override,
-      case
-        when sv.promo_price_grosz is not null
-         and now() between sv.promo_starts_at and sv.promo_ends_at
-        then sv.promo_price_grosz
-        else sv.price_grosz
-      end
-    ),
-    coalesce(ss.duration_minutes_override, sv.duration_minutes),
-    sv.buffer_after_minutes
-  from unnest(p_service_ids) with ordinality as requested(service_id, ord)
-  join public.services sv on sv.id = requested.service_id and sv.salon_id = p_salon_id
-  left join public.staff_services ss
-    on ss.staff_id = p_staff_id and ss.service_id = sv.id
-  order by requested.ord;
-$$;
-
--- ---------------------------------------------------------------------------
 -- Tworzenie rezerwacji
 -- ---------------------------------------------------------------------------
 
@@ -76,13 +29,14 @@ set search_path = public, pg_temp
 as $$
 declare
   v_booking_id uuid;
-  v_total_minutes integer;
-  v_buffer_minutes integer;
-  v_total_price integer;
-  v_items integer;
+  v_total_minutes integer := 0;
+  v_buffer_minutes integer := 0;
+  v_total_price integer := 0;
   v_status public.booking_status;
   v_auto_accept boolean;
   v_timezone text;
+  v_item record;
+  v_order smallint := 0;
 begin
   if p_service_ids is null or array_length(p_service_ids, 1) is null then
     raise exception 'Rezerwacja musi zawierać co najmniej jedną usługę' using errcode = 'P0001';
@@ -107,9 +61,9 @@ begin
   end if;
 
   -- Rezerwacja z internetu musi trafić w wolny termin wyliczony przez system.
-  -- Wizytę dopisywaną ręcznie salon może wcisnąć poza siatką i grafikiem —
-  -- tak wygląda praca w salonie. Przed nałożeniem na inną wizytę i tak chroni
-  -- ograniczenie w bazie.
+  -- Wizyta dopisywana ręcznie przez salon może wyjść poza siatkę i grafik —
+  -- barber czasem musi kogoś wcisnąć. Przed nałożeniem na inną wizytę i tak
+  -- chroni ograniczenie w bazie.
   if p_source = 'web' then
     if not exists (
       select 1 from public.get_available_slots(
@@ -125,19 +79,6 @@ begin
     end if;
   end if;
 
-  -- Ceny i czasy zapisujemy w chwili rezerwacji i nigdy ich później nie ruszamy.
-  select
-    sum(lines.duration_minutes)::int,
-    sum(lines.price_grosz)::int,
-    count(*)::int,
-    (array_agg(lines.buffer_after_minutes order by lines.item_order desc))[1]
-  into v_total_minutes, v_total_price, v_items, v_buffer_minutes
-  from public.booking_item_lines(p_salon_id, p_staff_id, p_service_ids) lines;
-
-  if coalesce(v_items, 0) = 0 then
-    raise exception 'Żadna ze wskazanych usług nie należy do tego salonu' using errcode = 'P0005';
-  end if;
-
   v_status := coalesce(
     p_status,
     case
@@ -146,6 +87,55 @@ begin
     end
   );
 
+  -- Ceny i czasy zapisujemy w chwili rezerwacji i nigdy ich później nie ruszamy.
+  create temporary table if not exists tmp_booking_items (
+    service_id uuid,
+    item_order smallint,
+    name_snapshot text,
+    price_grosz integer,
+    duration_minutes integer,
+    buffer_after_minutes integer
+  ) on commit drop;
+  delete from tmp_booking_items;
+
+  for v_item in
+    select
+      sv.id as service_id,
+      requested.ord::smallint as item_order,
+      sv.name as name_snapshot,
+      coalesce(
+        ss.price_grosz_override,
+        case
+          when sv.promo_price_grosz is not null
+           and now() between sv.promo_starts_at and sv.promo_ends_at
+          then sv.promo_price_grosz
+          else sv.price_grosz
+        end
+      ) as price_grosz,
+      coalesce(ss.duration_minutes_override, sv.duration_minutes) as duration_minutes,
+      sv.buffer_after_minutes
+    from unnest(p_service_ids) with ordinality as requested(service_id, ord)
+    join public.services sv on sv.id = requested.service_id and sv.salon_id = p_salon_id
+    left join public.staff_services ss
+      on ss.staff_id = p_staff_id and ss.service_id = sv.id
+    order by requested.ord
+  loop
+    v_order := v_item.item_order;
+    v_total_minutes := v_total_minutes + v_item.duration_minutes;
+    v_total_price := v_total_price + v_item.price_grosz;
+    -- Liczy się przerwa po ostatniej usłudze w kolejności.
+    v_buffer_minutes := v_item.buffer_after_minutes;
+
+    insert into tmp_booking_items values (
+      v_item.service_id, v_item.item_order, v_item.name_snapshot,
+      v_item.price_grosz, v_item.duration_minutes, v_item.buffer_after_minutes
+    );
+  end loop;
+
+  if v_order = 0 then
+    raise exception 'Żadna ze wskazanych usług nie należy do tego salonu' using errcode = 'P0005';
+  end if;
+
   insert into public.bookings (
     salon_id, staff_id, client_id, starts_at, ends_at, buffer_after_minutes,
     status, total_price_grosz, source, client_note, created_by
@@ -153,7 +143,7 @@ begin
     p_salon_id, p_staff_id, p_client_id,
     p_starts_at,
     p_starts_at + make_interval(mins => v_total_minutes),
-    coalesce(v_buffer_minutes, 0),
+    v_buffer_minutes,
     v_status, v_total_price, p_source, p_client_note, auth.uid()
   )
   returning id into v_booking_id;
@@ -162,9 +152,9 @@ begin
     salon_id, booking_id, service_id, item_order, name_snapshot,
     price_grosz, duration_minutes, buffer_after_minutes
   )
-  select p_salon_id, v_booking_id, lines.service_id, lines.item_order, lines.name_snapshot,
-         lines.price_grosz, lines.duration_minutes, lines.buffer_after_minutes
-  from public.booking_item_lines(p_salon_id, p_staff_id, p_service_ids) lines;
+  select p_salon_id, v_booking_id, service_id, item_order, name_snapshot,
+         price_grosz, duration_minutes, buffer_after_minutes
+  from tmp_booking_items;
 
   return v_booking_id;
 end;
@@ -293,7 +283,6 @@ $$;
 comment on function public.reschedule_booking is
   'Przekłada wizytę na nowy termin. Stary slot zwalniany jest w tej samej transakcji, ceny zostają bez zmian.';
 
-grant execute on function public.booking_item_lines(uuid, uuid, uuid[]) to authenticated;
 grant execute on function public.create_booking(uuid, uuid, uuid, uuid[], timestamptz, public.booking_source, text, public.booking_status) to authenticated;
 grant execute on function public.change_booking_status(uuid, public.booking_status, text) to authenticated;
 grant execute on function public.reschedule_booking(uuid, timestamptz, uuid) to authenticated;

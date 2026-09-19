@@ -1,8 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { z } from 'zod';
 
-import { parseRows } from '@/lib/parse';
-import { invalidateReviews, queryKeys } from '@/lib/query-keys';
 import { getSupabase } from '@/lib/supabase';
 
 export type SalonReview = {
@@ -16,20 +13,9 @@ export type SalonReview = {
   bookingId: string;
 };
 
-const reviewRow = z.object({
-  id: z.string(),
-  booking_id: z.string(),
-  rating: z.number(),
-  comment: z.string().nullable(),
-  salon_reply: z.string().nullable(),
-  created_at: z.string(),
-  staff: z.object({ display_name: z.string() }).nullable(),
-  clients: z.object({ first_name: z.string(), last_name: z.string().nullable() }).nullable(),
-});
-
 export function useSalonReviews(salonId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.salonReviews(salonId),
+    queryKey: ['salon-reviews', salonId],
     enabled: Boolean(salonId),
     queryFn: async (): Promise<SalonReview[]> => {
       const { data, error } = await getSupabase()
@@ -42,25 +28,31 @@ export function useSalonReviews(salonId: string | undefined) {
 
       if (error) throw error;
 
-      return parseRows(reviewRow, data, 'opinie salonu').map((review) => ({
-        id: review.id,
-        bookingId: review.booking_id,
-        rating: review.rating,
-        comment: review.comment,
-        salonReply: review.salon_reply,
-        createdAt: review.created_at,
-        staffName: review.staff?.display_name ?? '',
-        clientName: [review.clients?.first_name, review.clients?.last_name]
-          .filter(Boolean)
-          .join(' '),
-      }));
+      return data.map((review) => {
+        const client = review.clients as unknown as {
+          first_name: string;
+          last_name: string | null;
+        } | null;
+
+        return {
+          id: review.id,
+          bookingId: review.booking_id,
+          rating: review.rating,
+          comment: review.comment,
+          salonReply: review.salon_reply,
+          createdAt: review.created_at,
+          staffName:
+            (review.staff as unknown as { display_name: string } | null)?.display_name ?? '',
+          clientName: [client?.first_name, client?.last_name].filter(Boolean).join(' '),
+        };
+      });
     },
   });
 }
 
 export function useSalonRating(salonId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.salonRating(salonId),
+    queryKey: ['salon-rating', salonId],
     enabled: Boolean(salonId),
     queryFn: async (): Promise<{ average: number | null; count: number }> => {
       const { data, error } = await getSupabase().rpc('salon_rating', { p_salon_id: salonId! });
@@ -87,6 +79,8 @@ export function useReplyToReview() {
       });
       if (error) throw error;
     },
-    onSuccess: () => invalidateReviews(queryClient),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['salon-reviews'] });
+    },
   });
 }

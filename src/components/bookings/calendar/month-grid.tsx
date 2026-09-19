@@ -29,13 +29,13 @@ export function MonthGrid({
   bookingsOf,
   onSelectDay,
 }: {
-  gridStart: DateTime<true>;
+  gridStart: DateTime;
   gridDays: number;
-  monthStart: DateTime<true>;
-  selectedDay: DateTime<true>;
+  monthStart: DateTime;
+  selectedDay: DateTime;
   zone: string;
-  bookingsOf: (day: DateTime<true>) => BookingListItem[];
-  onSelectDay: (day: DateTime<true>) => void;
+  bookingsOf: (day: DateTime) => BookingListItem[];
+  onSelectDay: (day: DateTime) => void;
 }) {
   const theme = useTheme();
   const today = DateTime.now().setZone(zone);

@@ -13,11 +13,10 @@ import { statusLabel, statusTone } from '@/features/bookings/status';
 import { t } from '@/i18n';
 import { formatFullDate, formatPrice, formatTimeRange } from '@/lib/format';
 import { useTheme } from '@/theme';
-import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 
+const ZONE = 'Europe/Warsaw';
 
 export default function BookingDetailScreen() {
-  const zone = useSalonTimezone();
   const theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -58,8 +57,8 @@ export default function BookingDetailScreen() {
   return (
     <Screen scroll>
       <View style={{ gap: theme.spacing.xs }}>
-        <Text variant="title">{formatTimeRange(booking.startsAt, booking.endsAt, zone)}</Text>
-        <Text tone="secondary">{formatFullDate(booking.startsAt, zone)}</Text>
+        <Text variant="title">{formatTimeRange(booking.startsAt, booking.endsAt, ZONE)}</Text>
+        <Text tone="secondary">{formatFullDate(booking.startsAt, ZONE)}</Text>
         <Badge label={statusLabel(booking.status)} tone={statusTone(booking.status)} />
       </View>
 
@@ -182,6 +181,11 @@ export default function BookingDetailScreen() {
         )
       ) : null}
 
+      <Button
+        label={t('common.back')}
+        variant="secondary"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)'))}
+      />
     </Screen>
   );
 }

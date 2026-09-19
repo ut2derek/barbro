@@ -1,9 +1,7 @@
 import { Image } from 'expo-image';
-import { Linking, Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
-import { Stars } from '@/components/ui/stars';
 import { Text } from '@/components/ui/text';
-import { t } from '@/i18n';
 import { useTheme } from '@/theme';
 
 const COVER_HEIGHT = 160;
@@ -25,8 +23,6 @@ type Props = {
   logoUrl: string | null;
   coverUrl: string | null;
   brandColor: string | null;
-  rating: number | null;
-  reviewsCount: number;
 };
 
 /**
@@ -34,26 +30,9 @@ type Props = {
  * nazwa i adres. Bez wgranych grafik pokazujemy kolor salonu i inicjały —
  * strona ma wyglądać kompletnie od pierwszego dnia, jeszcze przed zdjęciami.
  */
-export function SalonHeader({
-  name,
-  address,
-  logoUrl,
-  coverUrl,
-  brandColor,
-  rating,
-  reviewsCount,
-}: Props) {
+export function SalonHeader({ name, address, logoUrl, coverUrl, brandColor }: Props) {
   const theme = useTheme();
   const accent = brandColor ?? theme.colors.accentMuted;
-
-  /**
-   * Adres otwieramy uniwersalnym odnośnikiem Google Maps: na telefonie
-   * przejmuje go aplikacja Map, a gdy jej nie ma — przeglądarka.
-   */
-  function openMaps() {
-    const query = encodeURIComponent(`${name}, ${address}`);
-    void Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
-  }
 
   return (
     <View style={{ alignItems: 'center', marginBottom: theme.spacing.md }}>
@@ -108,28 +87,10 @@ export function SalonHeader({
         <Text variant="display" style={{ textAlign: 'center' }}>
           {name}
         </Text>
-
-        {rating !== null ? <Stars value={rating} count={reviewsCount} /> : null}
         {address ? (
-          <>
-            <Text tone="secondary" style={{ textAlign: 'center' }}>
-              {address}
-            </Text>
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel={t('publicBooking.openMaps')}
-              onPress={openMaps}
-              style={{
-                minHeight: theme.minTouchTarget,
-                justifyContent: 'center',
-                paddingHorizontal: theme.spacing.sm,
-              }}
-            >
-              <Text variant="label" tone="accent">
-                {t('publicBooking.openMaps')}
-              </Text>
-            </Pressable>
-          </>
+          <Text tone="secondary" style={{ textAlign: 'center' }}>
+            {address}
+          </Text>
         ) : null}
       </View>
     </View>

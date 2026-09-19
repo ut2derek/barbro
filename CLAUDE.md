@@ -104,11 +104,6 @@ dostępna.
 najniższej ceny z 30 dni przed obniżką. Zapisywana automatycznie wyzwalaczem,
 nie z aplikacji.
 
-**`service_addons`** — dodatki dobierane przy rezerwacji (np. mycie, tuszowanie
-siwizny): `salon_id`, `service_id` (**puste = dodatek proponowany przy każdej
-usłudze**), nazwa, opis, `price_grosz`, `duration_minutes`, `max_quantity`,
-`active`, kolejność. Dodatek **wydłuża wizytę** i wchodzi do kwoty rezerwacji.
-
 ### Czas pracy
 
 **`salon_hours`** — godziny otwarcia salonu: dzień tygodnia, `open_time`,
@@ -127,11 +122,8 @@ Per fryzjer albo dla całego salonu (np. święto). Zakres dat.
 
 **`clients`** — `salon_id`, `user_id` (**może być puste**), imię, nazwisko,
 mail (wymagany), telefon (wymagany), notatka wewnętrzna, `no_show_count`,
-`blocked`, `internal_rating` (ocena rzetelności wystawiona przez salon, klient
-jej nie widzi). Klient nie musi mieć konta; może je założyć (mail, Google,
-Apple) i wtedy widzi swoje wizyty. Deduplikacja po mailu w obrębie salonu —
-**porównanie dokładne (`=`), nigdy dopasowanie wzorca**, bo adres pochodzi
-z internetu.
+`blocked`. Klient nie musi mieć konta; może je założyć (mail, Google, Apple)
+i wtedy widzi swoje wizyty. Deduplikacja po mailu w obrębie salonu.
 
 **`bookings`** — `salon_id`, `staff_id`, `client_id`, `time_range`
 (`tstzrange`), `status`, `total_price_grosz` (suma zapisana w momencie
@@ -140,23 +132,12 @@ rezerwacji), `source` (`web` \| `manual` \| `app`), `cancellation_comment`,
 (przy przełożeniu), `google_event_id`, `client_note`.
 
 **`booking_items`** — pozycje rezerwacji: `booking_id`, `service_id`,
-`item_order` (nie `position` — to słowo zastrzeżone w SQL), `name_snapshot`,
-`price_grosz`, `duration_minutes`, `buffer_after_minutes`. **Jedna rezerwacja może mieć kilka usług**
+`position`, `name_snapshot`, `price_grosz`, `duration_minutes`,
+`buffer_after_minutes`. **Jedna rezerwacja może mieć kilka usług**
 (np. strzyżenie + broda). Czas trwania wizyty = suma czasów pozycji,
 przerwa po ostatniej pozycji wlicza się do blokady slotu.
 
-**`booking_addons`** — dodatki wybrane do konkretnej rezerwacji, z ceną
-i czasem zapisanymi w momencie rezerwacji (tak samo jak przy usługach).
-
 **`booking_status_history`** — kto, kiedy, ze statusu na status, komentarz.
-
-### Opinie
-
-**`booking_reviews`** — ocena 1–5 i komentarz wystawiane przez klienta
-**wyłącznie do wizyty ze statusem `completed`**, z linku w mailu. Jedna opinia
-na wizytę. Salon może dopisać odpowiedź (`salon_reply`), ale nie może zmienić
-ani usunąć oceny — wyzwalacz nadpisuje `salon_id`, `staff_id` i `client_id`
-danymi z rezerwacji, więc opinii nie da się podstawić.
 
 ### Integracje i wysyłki
 
@@ -167,21 +148,13 @@ w bazie, status połączenia, data ostatniej synchronizacji, licznik błędów.
 użycia.
 
 **`email_log`** — typ maila, odbiorca, powiązana rezerwacja, status wysyłki,
-liczba prób, klucz idempotencji. Wpisy dodaje **wyzwalacz w bazie** przy zmianie
-statusu rezerwacji, nie aplikacja — dzięki temu żadna droga zmiany statusu nie
-pominie powiadomienia.
-
-**`rate_limits`** — licznik zapytań do funkcji publicznych, po operacji i adresie
-IP. Jedyna tabela bez `salon_id`, obok `app_admins`.
+liczba prób, klucz idempotencji.
 
 ### Poza zakresem MVP (miejsce w modelu jest, kodu nie ma)
 
 SMS (`clients.sms_consent`), zadatki i płatności (`bookings.deposit_*`),
-lista oczekujących, karnety, samoobsługowa rejestracja salonów, odczyt
-zajętości z Booksy.
-
-(Opinie i dodatki do usług były pierwotnie poza zakresem — zostały zbudowane
-na wyraźną prośbę i są opisane wyżej.)
+lista oczekujących, opinie, dodatki do usług, karnety, samoobsługowa
+rejestracja salonów, odczyt zajętości z Booksy.
 
 ---
 
@@ -239,17 +212,7 @@ z komentarzem), `rescheduled` (stary termin po przełożeniu), `expired`
     i w polu URL link do rezerwacji otwierający ekran w aplikacji (universal
     link / app link) albo panel web. Link wymaga zalogowania. Tytuł wydarzenia
     według szablonu salonu. Do Google wysyłamy minimum danych.
-12. **Dodatki wydłużają wizytę.** Czas i cenę dodatku bierzemy **z bazy**, nigdy
-    z tego, co przysłał klient — inaczej dałoby się kupić godzinę pracy za złotówkę.
-13. **Opinię wystawia się tylko do wizyty zrealizowanej**, raz, z linku w mailu.
-    Salon odpowiada, ale nie zmienia i nie usuwa oceny.
-14. **Funkcje publiczne mają limit zapytań** po adresie IP (`rate_limit_take`).
-    Bez niego dało się w pętli tworzyć niepotwierdzone rezerwacje i blokować
-    realne terminy po 20 minut każdy.
-15. **Link z maila ma datę ważności i jest sprawdzany przy każdej operacji** —
-    podglądzie, potwierdzeniu, odwołaniu i wystawieniu opinii. Sprawdzenie
-    siedzi w jednym miejscu (`bookingByToken`), żeby nie dało się go pominąć.
-16. **Czas i waluta:** daty w UTC, wyświetlanie w strefie salonu, poprawna
+12. **Czas i waluta:** daty w UTC, wyświetlanie w strefie salonu, poprawna
     obsługa zmiany czasu letniego i zimowego. Waluta PLN, zegar 24-godzinny,
     interfejs po polsku, teksty w plikach tłumaczeń (i18n) z myślą o przyszłości.
 
@@ -270,7 +233,6 @@ wyłączona · odwołanie przez klienta do 12 h przed · rezerwacje online włą
 | wyłączanie promocji po dacie końcowej | codziennie |
 | odświeżanie tokenów Google i ponawianie nieudanych synchronizacji | co 15 minut |
 | ponawianie nieudanych wysyłek maili | co 5 minut |
-| sprzątanie liczników limitu zapytań | codziennie |
 | przypomnienie mailowe dzień przed wizytą | **przygotowane, wyłączone w MVP** |
 
 ---
@@ -290,10 +252,6 @@ wyłączona · odwołanie przez klienta do 12 h przed · rezerwacje online włą
   włączanie i wyłączanie salonu. Bez wglądu w dane osobowe klientów.
 - Tworzenie rezerwacji z internetu przechodzi przez Edge Function z limitem
   zapytań (ochrona przed botami).
-- **Funkcja `security definer` omija reguły dostępu z definicji**, więc każda
-  taka funkcja musi sama sprawdzić, komu odpowiada. Robi to `caller_may_read_salon`:
-  zalogowany użytkownik musi należeć do salonu, rola serwisowa (funkcja brzegowa
-  strony rezerwacji) przechodzi, bo dostępu pilnuje wtedy sama funkcja brzegowa.
 
 ### Dane osobowe
 
@@ -318,9 +276,6 @@ wyłączona · odwołanie przez klienta do 12 h przed · rezerwacje online włą
 - **Nowa wizyta** dodawana ręcznie
 - **Blokada czasu**
 - **Usługi** — lista z kategoriami, pełna edycja, zmiana kolejności, promocje
-- **Dodatki** — dobierane przy rezerwacji, z ceną i czasem; dodatek bez
-  wskazanej usługi proponowany jest przy każdej
-- **Opinie** — lista opinii klientów z możliwością odpowiedzi salonu
 - **Grafik** — godziny pracy, wyjątki, urlopy
 - **Zespół** (właściciel) — zapraszanie, role, przypisanie usług, nadpisania cen
 - **Ustawienia** — dane salonu, logo, kolor, automatyczna akceptacja,
@@ -339,11 +294,7 @@ wyłączona · odwołanie przez klienta do 12 h przed · rezerwacje online włą
   gdy push nie dotrze
 - ponawianie nieudanych wysyłek maili i synchronizacji kalendarza, wszystkie
   operacje idempotentne (klucz idempotencji w `email_log`)
-- Sentry w aplikacji i w funkcjach serwerowych — **każdy** błąd zapytania
-  i zapisu przechodzi przez `queryClient`, funkcje brzegowe przez `reportError`.
-  Błędy, które pokazujemy użytkownikowi (zły adres e-mail, zajęty termin),
-  oznaczamy jako spodziewane i nie wysyłamy — inaczej literówka klienta
-  wyglądałaby w Sentry jak awaria.
+- Sentry w aplikacji i w funkcjach serwerowych
 - dwa środowiska: testowe i produkcyjne, migracje bazy trzymane w repozytorium
 - skrypt z danymi testowymi: przykładowy salon, zespół, usługi, grafik, rezerwacje
 
@@ -362,17 +313,7 @@ tryb jasny i ciemny.
 ## 11. Testy
 
 Logika dostępności pokryta testami uruchamianymi na **lokalnej bazie
-Supabase** — testujemy prawdziwą funkcję SQL, nie jej kopię w JS. Funkcje
-brzegowe testujemy przez HTTP, tak jak wywoła je przeglądarka.
-
-Nawyk, który się opłacił: **każda naprawiona usterka dostaje test opisujący,
-na czym polegała** (patrz `tests/hardening.test.ts`). Dzięki temu poprawka nie
-cofa się przy kolejnej zmianie.
-
-> Lokalne funkcje brzegowe nie przeładowują się same po zmianie kodu.
-> Po edycji czegokolwiek w `supabase/functions/` uruchom
-> `docker restart supabase_edge_runtime_barbro`, zanim odpalisz testy —
-> inaczej sprawdzasz starą wersję.
+Supabase** — testujemy prawdziwą funkcję SQL, nie jej kopię w JS.
 
 Przypadki brzegowe, które muszą przejść:
 
@@ -416,34 +357,19 @@ co dalej. Commity małymi porcjami z czytelnymi opisami.
 ## 13. Struktura repozytorium
 
 ```
+app/                 ekrany (expo-router)
 src/
-  app/               ekrany (expo-router)
-    (app)/           aplikacja barbera — wymaga zalogowania
-    rezerwacja/      strona rezerwacji dla klienta (docelowo osobne repo)
-    wizyta/          wizyta klienta spod linku z maila (jw.)
   components/        komponenty wspólne
-    ui/              klocki bez wiedzy o dziedzinie (Button, Card, Input…)
-    bookings/        wspólne dla wizyt (SlotPicker, BookingCard, CancelSheet)
-    public/          strona rezerwacji dla klienta
   theme/             tokeny: kolory, typografia, odstępy, promienie
-  lib/               klient Supabase, TanStack Query, Sentry, klucze zapytań,
-                     sprawdzanie kształtu odpowiedzi (parse.ts), formatowanie
-  features/          logika ekranów pogrupowana funkcjonalnie (zapytania i stan)
+  lib/               klient Supabase, TanStack Query, Sentry
+  features/          logika ekranów pogrupowana funkcjonalnie
   i18n/              pl.json (i miejsce na kolejne języki)
 supabase/
   migrations/        migracje SQL — jedyne źródło kształtu bazy
-  functions/
-    _shared/         wspólne dla funkcji brzegowych (CORS, Sentry, limit zapytań)
-    public-booking/  strona rezerwacji: rozdzielnia + jeden plik na obszar
-  seed.sql           dane testowe
-tests/               testy na lokalnej bazie (Vitest) + testy funkcji brzegowych
-.docs/               notatki dla programisty (przeglądy kodu, decyzje)
+  functions/         Edge Functions
+  seed/              dane testowe
+tests/               testy logiki dostępności (Vitest + lokalna baza)
 ```
-
-**Gdzie co dopisać.** Nowe zapytanie do serwera → `features/<obszar>/queries.ts`
-plus klucz w `lib/query-keys.ts`. Nowy ekran → `app/`, a jego stan i reguły do
-`features/`. Komponent używany w dwóch miejscach → `components/`, nie kopia.
-Nowa reguła biznesowa → migracja SQL, nie kod aplikacji.
 
 ---
 

@@ -14,7 +14,7 @@ type Props = {
   zone: string;
   busy?: boolean;
   onClose: () => void;
-  onConfirm: (comment: string, bookingId: string) => void;
+  onConfirm: (comment: string) => void;
 };
 
 /**
@@ -74,7 +74,7 @@ export function CancelSheet({ booking, zone, busy = false, onClose, onConfirm }:
             variant="danger"
             disabled={comment.trim().length < 3}
             loading={busy}
-            onPress={() => onConfirm(comment.trim(), booking.id)}
+            onPress={() => onConfirm(comment.trim())}
           />
 
           <Button label={t('booking.keepBooking')} variant="secondary" onPress={onClose} />

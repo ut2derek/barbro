@@ -1,5 +1,5 @@
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Linking, Switch, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
-import { Stars } from '@/components/ui/stars';
 import { Text } from '@/components/ui/text';
 import { useClient, useClientBookings, useUpdateClient } from '@/features/clients/queries';
 import { statusLabel, statusTone } from '@/features/bookings/status';
@@ -15,12 +14,11 @@ import type { BookingStatus } from '@/features/bookings/queries';
 import { t } from '@/i18n';
 import { formatFullDate, formatPrice, formatTimeRange } from '@/lib/format';
 import { useTheme } from '@/theme';
-import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 
+const ZONE = 'Europe/Warsaw';
 
 /** Karta klienta: kontakt, notatka salonu i pełna historia wizyt. */
 export default function ClientScreen() {
-  const zone = useSalonTimezone();
   const theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,6 +26,13 @@ export default function ClientScreen() {
   const { data: client, isPending } = useClient(id);
   const { data: bookings } = useClientBookings(id);
   const updateClient = useUpdateClient();
+
+  const [note, setNote] = useState('');
+  const [noteSaved, setNoteSaved] = useState(false);
+
+  useEffect(() => {
+    if (client) setNote(client.internalNote ?? '');
+  }, [client]);
 
   if (isPending || !client) {
     return (
@@ -42,10 +47,8 @@ export default function ClientScreen() {
 
   return (
     <Screen scroll>
-      {/* W nagłówku imię klienta — „Klient” niczego nie mówi. */}
-      <Stack.Screen options={{ title: client.name }} />
-
       <View style={{ gap: theme.spacing.xs }}>
+        <Text variant="title">{client.name}</Text>
         <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
           {client.blocked ? <Badge label={t('clients.blocked')} tone="danger" /> : null}
           {client.noShowCount > 0 ? (
@@ -88,27 +91,32 @@ export default function ClientScreen() {
       </View>
 
       <Card>
-        <Text variant="heading">{t('clients.rating')}</Text>
+        <Text variant="heading">{t('clients.note')}</Text>
         <Text variant="small" tone="muted">
-          {t('clients.ratingHint')}
+          {t('clients.noteHint')}
         </Text>
-        <Stars
-          value={client.internalRating}
-          size="large"
-          count={null}
-          onChange={(value) =>
-            updateClient.mutate({
-              clientId: id,
-              // Ta sama gwiazdka drugi raz kasuje ocenę.
-              internalRating: client.internalRating === value ? null : value,
-            })
-          }
+        <Input
+          label={t('clients.note')}
+          value={note}
+          onChangeText={(value) => {
+            setNote(value);
+            setNoteSaved(false);
+          }}
+          multiline
+          numberOfLines={3}
+          placeholder={t('clients.notePlaceholder')}
+        />
+        {noteSaved ? <Text tone="success" variant="small">{t('settings.saved')}</Text> : null}
+        <Button
+          label={t('common.save')}
+          variant="secondary"
+          loading={updateClient.isPending}
+          onPress={async () => {
+            await updateClient.mutateAsync({ clientId: id, internalNote: note });
+            setNoteSaved(true);
+          }}
         />
       </Card>
-
-      {/* Klucz z identyfikatorem klienta: notatka wczytuje się raz, a ponowne
-          pobranie danych nie kasuje tego, co barber właśnie pisze. */}
-      <ClientNoteCard key={client.id} clientId={client.id} initialNote={client.internalNote} />
 
       <Card>
         <View
@@ -138,14 +146,14 @@ export default function ClientScreen() {
         (bookings ?? []).map((booking) => (
           <Card key={booking.id}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text variant="bodyStrong">{formatFullDate(booking.startsAt, zone)}</Text>
+              <Text variant="bodyStrong">{formatFullDate(booking.startsAt, ZONE)}</Text>
               <Badge
                 label={statusLabel(booking.status as BookingStatus)}
                 tone={statusTone(booking.status as BookingStatus)}
               />
             </View>
             <Text tone="secondary" variant="small">
-              {formatTimeRange(booking.startsAt, booking.endsAt, zone)} · {booking.staffName}
+              {formatTimeRange(booking.startsAt, booking.endsAt, ZONE)} · {booking.staffName}
             </Text>
             <Text variant="small">{booking.services.join(' + ')}</Text>
             <Text variant="small" tone="secondary">
@@ -155,53 +163,11 @@ export default function ClientScreen() {
         ))
       )}
 
-    </Screen>
-  );
-}
-
-/** Notatka salonu o kliencie. Klient jej nie widzi. */
-function ClientNoteCard({
-  clientId,
-  initialNote,
-}: {
-  clientId: string;
-  initialNote: string | null;
-}) {
-  const updateClient = useUpdateClient();
-  const [note, setNote] = useState(initialNote ?? '');
-  const [saved, setSaved] = useState(false);
-
-  return (
-    <Card>
-      <Text variant="heading">{t('clients.note')}</Text>
-      <Text variant="small" tone="muted">
-        {t('clients.noteHint')}
-      </Text>
-      <Input
-        label={t('clients.note')}
-        value={note}
-        onChangeText={(value) => {
-          setNote(value);
-          setSaved(false);
-        }}
-        multiline
-        numberOfLines={3}
-        placeholder={t('clients.notePlaceholder')}
-      />
-      {saved ? (
-        <Text tone="success" variant="small">
-          {t('settings.saved')}
-        </Text>
-      ) : null}
       <Button
-        label={t('common.save')}
+        label={t('common.back')}
         variant="secondary"
-        loading={updateClient.isPending}
-        onPress={async () => {
-          await updateClient.mutateAsync({ clientId, internalNote: note });
-          setSaved(true);
-        }}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)/clients'))}
       />
-    </Card>
+    </Screen>
   );
 }

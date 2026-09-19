@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -20,6 +21,7 @@ import { useTheme } from '@/theme';
 /** Panel właściciela produktu: zakładanie salonów i podgląd ruchu. */
 export default function AdminScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { data: isAdmin, isPending: checking } = useIsAppAdmin();
   const { data: salons } = useSalonOverview(isAdmin === true);
 
@@ -41,7 +43,9 @@ export default function AdminScreen() {
   if (!isAdmin) {
     return (
       <Screen>
-          <Text tone="secondary">{t('admin.noAccess')}</Text>
+        <Text variant="title">{t('admin.title')}</Text>
+        <Text tone="secondary">{t('admin.noAccess')}</Text>
+        <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
       </Screen>
     );
   }
@@ -170,6 +174,11 @@ export default function AdminScreen() {
         </Card>
       ) : null}
 
+      <Button
+        label={t('common.back')}
+        variant="secondary"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)'))}
+      />
     </Screen>
   );
 }

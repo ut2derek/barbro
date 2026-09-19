@@ -38,24 +38,12 @@ type Props = {
   showStaff?: boolean;
   onPress: () => void;
   onQuickAction?: (booking: BookingListItem, status: BookingStatus, label: string) => void;
-  /** Odwołanie zawsze wymaga powodu, więc otwiera osobne okno zamiast działać od razu. */
-  onCancel?: (booking: BookingListItem) => void;
 };
 
-export function BookingCard({
-  booking,
-  zone,
-  showStaff = false,
-  onPress,
-  onQuickAction,
-  onCancel,
-}: Props) {
+export function BookingCard({ booking, zone, showStaff = false, onPress, onQuickAction }: Props) {
   const theme = useTheme();
   const cancelled = booking.status.startsWith('cancelled') || booking.status === 'no_show';
   const actions = onQuickAction ? quickActions(booking.status) : {};
-  const canCancel =
-    Boolean(onCancel) &&
-    ['pending_confirmation', 'pending_approval', 'confirmed'].includes(booking.status);
 
   function ActionPanel({ action }: { action: QuickAction }) {
     return (
@@ -79,53 +67,47 @@ export function BookingCard({
     );
   }
 
-  // Kafelek jest kontenerem, a nie przyciskiem — akcje muszą być jego
-  // rodzeństwem, inaczej powstaje przycisk w przycisku (nieprawidłowy układ).
   const card = (
-    <View
-      style={{
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${formatTimeRange(booking.startsAt, booking.endsAt, zone)} ${booking.clientName}`}
+      onPress={onPress}
+      style={({ pressed }) => ({
         backgroundColor: theme.colors.surface,
         borderRadius: theme.radius.lg,
         borderWidth: 1,
         borderColor: theme.colors.border,
         padding: theme.spacing.lg,
         gap: theme.spacing.xs,
-        opacity: cancelled ? 0.6 : 1,
-      }}
+        opacity: pressed ? 0.85 : cancelled ? 0.6 : 1,
+      })}
     >
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={`${formatTimeRange(booking.startsAt, booking.endsAt, zone)} ${booking.clientName}`}
-        onPress={onPress}
-        style={({ pressed }) => ({ gap: theme.spacing.xs, opacity: pressed ? 0.7 : 1 })}
-      >
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text variant="heading">{formatTimeRange(booking.startsAt, booking.endsAt, zone)}</Text>
-          <Badge label={statusLabel(booking.status)} tone={statusTone(booking.status)} />
-        </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text variant="heading">{formatTimeRange(booking.startsAt, booking.endsAt, zone)}</Text>
+        <Badge label={statusLabel(booking.status)} tone={statusTone(booking.status)} />
+      </View>
 
-        <Text variant="bodyStrong">{booking.clientName}</Text>
-        <Text tone="secondary" variant="small">
-          {booking.services.join(' + ')}
-        </Text>
+      <Text variant="bodyStrong">{booking.clientName}</Text>
+      <Text tone="secondary" variant="small">
+        {booking.services.join(' + ')}
+      </Text>
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          {showStaff ? (
-            <Text tone="muted" variant="small">
-              {booking.staffName}
-            </Text>
-          ) : (
-            <View />
-          )}
-          <Text tone="secondary" variant="small">
-            {formatPrice(booking.totalPriceGrosz)}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        {showStaff ? (
+          <Text tone="muted" variant="small">
+            {booking.staffName}
           </Text>
-        </View>
-      </Pressable>
+        ) : (
+          <View />
+        )}
+        <Text tone="secondary" variant="small">
+          {formatPrice(booking.totalPriceGrosz)}
+        </Text>
+      </View>
 
       {/* Te same akcje co gest — dla myszy, czytnika ekranu i tych, którzy
           nie wiedzą, że kafelek da się przesunąć. */}
-      {actions.right || actions.left || canCancel ? (
+      {actions.right || actions.left ? (
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.xs }}>
           {actions.right ? (
             <Pressable
@@ -164,29 +146,9 @@ export function BookingCard({
               </Text>
             </Pressable>
           ) : null}
-
-          {canCancel ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => onCancel?.(booking)}
-              style={{
-                flex: 1,
-                minHeight: theme.minTouchTarget,
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: theme.radius.md,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-              }}
-            >
-              <Text variant="label" tone="secondary">
-                {t('booking.cancelBooking')}
-              </Text>
-            </Pressable>
-          ) : null}
         </View>
       ) : null}
-    </View>
+    </Pressable>
   );
 
   if (!actions.right && !actions.left) return card;

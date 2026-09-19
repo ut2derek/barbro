@@ -1,18 +1,16 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-
-import type { Database } from './database.types';
 import { AppState, Platform } from 'react-native';
 
 import { env, isSupabaseConfigured } from './env';
 
-let client: SupabaseClient<Database> | null = null;
+let client: SupabaseClient | null = null;
 
 /**
  * Klient Supabase. Tworzony przy pierwszym użyciu, żeby aplikacja uruchamiała się
  * także bez konfiguracji (przydatne na starcie projektu i w testach).
  */
-export function getSupabase(): SupabaseClient<Database> {
+export function getSupabase(): SupabaseClient {
   if (!isSupabaseConfigured) {
     throw new Error(
       'Brak konfiguracji Supabase. Uzupełnij EXPO_PUBLIC_SUPABASE_URL i EXPO_PUBLIC_SUPABASE_ANON_KEY w pliku .env.local.',
@@ -20,7 +18,7 @@ export function getSupabase(): SupabaseClient<Database> {
   }
 
   if (!client) {
-    client = createClient<Database>(env.supabaseUrl, env.supabaseAnonKey, {
+    client = createClient(env.supabaseUrl, env.supabaseAnonKey, {
       auth: {
         storage: AsyncStorage,
         autoRefreshToken: true,

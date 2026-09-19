@@ -8,18 +8,19 @@
 // zastąpi je link do ustawienia własnego hasła.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
-import { z } from 'npm:zod@^4.6.5';
 
-import { CORS, json } from '../_shared/http.ts';
-import { reportError } from '../_shared/observability.ts';
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
 
-/** Kształt żądania sprawdzamy schematem, nie serią warunków „czy nie puste". */
-const requestSchema = z.object({
-  salonName: z.string().trim().min(2, 'Podaj nazwę salonu').max(120),
-  ownerEmail: z.string().trim().toLowerCase().email('Nieprawidłowy adres e-mail').max(254),
-  ownerName: z.string().trim().min(1).max(80).optional(),
-  city: z.string().trim().max(80).optional(),
-});
+function json(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...CORS, 'Content-Type': 'application/json' },
+  });
+}
 
 function randomPassword(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(12));
@@ -60,21 +61,27 @@ Deno.serve(async (req) => {
     return json({ error: 'Tylko administrator platformy' }, 403);
   }
 
-  const raw = await req.json().catch(() => null);
-  const parsed = requestSchema.safeParse(raw);
-  if (!parsed.success) {
-    return json({ error: parsed.error.issues[0]?.message ?? 'Nieprawidłowe dane' }, 400);
+  let payload: { salonName?: string; ownerEmail?: string; ownerName?: string; city?: string };
+  try {
+    payload = await req.json();
+  } catch {
+    return json({ error: 'Nieprawidłowe dane' }, 400);
   }
 
-  const { salonName, ownerEmail, city } = parsed.data;
-  const ownerName = parsed.data.ownerName || 'Właściciel';
+  const salonName = payload.salonName?.trim();
+  const ownerEmail = payload.ownerEmail?.trim().toLowerCase();
+  const ownerName = payload.ownerName?.trim() || 'Właściciel';
+
+  if (!salonName || !ownerEmail) {
+    return json({ error: 'Podaj nazwę salonu i adres e-mail właściciela' }, 400);
+  }
 
   const slug = `${slugify(salonName)}-${crypto.randomUUID().slice(0, 6)}`;
 
   try {
     const { data: salon, error: salonError } = await admin
       .from('salons')
-      .insert({ name: salonName, slug, city: city || null })
+      .insert({ name: salonName, slug, city: payload.city?.trim() || null })
       .select('id')
       .single();
     if (salonError) throw salonError;
@@ -107,7 +114,7 @@ Deno.serve(async (req) => {
 
     return json({ salonId: salon.id, slug, ownerId, temporaryPassword });
   } catch (error) {
-    reportError(error, 'zakładanie salonu', { slug });
+    console.error('Zakładanie salonu nie powiodło się', error);
     return json({ error: 'Nie udało się założyć salonu' }, 500);
   }
 });

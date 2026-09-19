@@ -36,14 +36,14 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <Screen scroll edges={['top', 'bottom']}>
+    <Screen scroll>
       <View style={{ gap: theme.spacing.lg, paddingTop: theme.spacing.xl }}>
         <Text variant="title">{t('auth.resetTitle')}</Text>
 
         {sent ? (
           <>
             <Text tone="secondary">{t('auth.resetSent')}</Text>
-            <Button label={t('auth.backToLogin')} onPress={() => router.replace('/(auth)/login')} />
+            <Button label={t('auth.backToLogin')} onPress={() => router.back()} />
           </>
         ) : (
           <>
@@ -61,11 +61,7 @@ export default function ForgotPasswordScreen() {
             {error ? <Text tone="danger">{error}</Text> : null}
 
             <Button label={t('auth.sendResetLink')} onPress={handleSend} loading={busy} />
-            <Button
-              label={t('common.cancel')}
-              variant="secondary"
-              onPress={() => (router.canGoBack() ? router.back() : router.replace('/(auth)/login'))}
-            />
+            <Button label={t('common.cancel')} variant="secondary" onPress={() => router.back()} />
           </>
         )}
       </View>

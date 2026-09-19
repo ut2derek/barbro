@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
 import { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BookingCard } from '@/components/bookings/booking-card';
@@ -48,17 +48,15 @@ export default function CalendarScreen() {
 
   const [cancelling, setCancelling] = useState<BookingListItem | null>(null);
   const [mode, setMode] = useState<CalendarMode>('day');
-  const [day, setDay] = useState<DateTime<true>>(
-    () => DateTime.now().setZone(zone).startOf('day') as DateTime<true>,
-  );
+  const [day, setDay] = useState(() => DateTime.now().setZone(zone).startOf('day'));
   const [staffId, setStaffId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const weekStart = day.startOf('week') as DateTime<true>;
-  const monthStart = day.startOf('month') as DateTime<true>;
+  const weekStart = day.startOf('week');
+  const monthStart = day.startOf('month');
   // Siatka zaczyna się od poniedziałku tygodnia, w którym wypada pierwszy dzień
   // miesiąca, i zawsze ma pełne tygodnie.
-  const gridStart = monthStart.startOf('week') as DateTime<true>;
+  const gridStart = monthStart.startOf('week');
   const gridDays = Math.ceil(monthStart.endOf('month').endOf('week').diff(gridStart, 'days').days);
 
   const dayQuery = useDayBookings({ salonId: salon?.salonId, zone, day, staffId });
@@ -84,13 +82,13 @@ export default function CalendarScreen() {
     return map;
   }, [rangeQuery.data, zone]);
 
-  function bookingsOf(target: DateTime<true>): BookingListItem[] {
+  function bookingsOf(target: DateTime): BookingListItem[] {
     return byDay.get(target.toISODate()!) ?? [];
   }
 
   function shift(direction: 1 | -1) {
     const unit = mode === 'day' ? 'days' : mode === 'week' ? 'weeks' : 'months';
-    setDay(day.plus({ [unit]: direction }) as DateTime<true>);
+    setDay(day.plus({ [unit]: direction }));
   }
 
   function openBooking(booking: BookingListItem) {
@@ -118,7 +116,7 @@ export default function CalendarScreen() {
         isToday={isToday}
         onShift={shift}
         onOpenMonthPicker={() => setPickerOpen(true)}
-        onBackToToday={() => setDay(DateTime.now().setZone(zone).startOf('day') as DateTime<true>)}
+        onBackToToday={() => setDay(DateTime.now().setZone(zone).startOf('day'))}
         staff={staffChips}
         staffId={staffId}
         onStaffChange={setStaffId}

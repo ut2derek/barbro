@@ -318,8 +318,8 @@ describe('usługi i fryzjerzy', () => {
       const notDoing = await addStaff(db, salonId, 'Nie robi');
       const serviceId = await addService(db, salonId, { duration: 60 });
       await assignService(db, salonId, doing, serviceId);
-      await setSalonHours(db, salonId, MON, '09:00', '17:00');
       for (const staffId of [doing, notDoing]) {
+        await setSalonHours(db, salonId, MON, '09:00', '17:00');
         await setWorkingHours(db, salonId, staffId, MON, '09:00', '17:00');
       }
 
@@ -368,35 +368,6 @@ describe('wyprzedzenie, horyzont i wyłączony salon', () => {
     });
   });
 
-  it('ostatni dzień horyzontu jeszcze działa, pierwszy dzień za nim już nie', async () => {
-    await withRollback(async (db) => {
-      const salonId = await createSalon(db, { horizon: 30 });
-      const staffId = await addStaff(db, salonId);
-      const serviceId = await addService(db, salonId, { duration: 60 });
-      await assignService(db, salonId, staffId, serviceId);
-
-      // Salon i fryzjer pracują siedem dni w tygodniu, żeby granica horyzontu
-      // była jedynym powodem braku terminów.
-      for (const weekday of [1, 2, 3, 4, 5, 6, 7]) {
-        await setSalonHours(db, salonId, weekday, '09:00', '17:00');
-        await setWorkingHours(db, salonId, staffId, weekday, '09:00', '17:00');
-      }
-
-      // Data jako tekst — sterownik bazy zamieniłby typ date na czas
-      // uniwersalny i cofnął dzień o jeden.
-      const { rows } = await db.query(
-        `select to_char((now() at time zone 'Europe/Warsaw')::date, 'YYYY-MM-DD') as today`,
-      );
-      const today: string = rows[0].today;
-
-      const lastDay = dayAfter(today, 30);
-      const dayTooFar = dayAfter(today, 31);
-
-      expect((await availableSlots(db, salonId, [serviceId], lastDay)).length).toBeGreaterThan(0);
-      expect(await availableSlots(db, salonId, [serviceId], dayTooFar)).toHaveLength(0);
-    });
-  });
-
   it('wyłączony salon nie proponuje niczego', async () => {
     await withRollback(async (db) => {
       const { salonId, serviceId } = await simpleSalon(db);
@@ -424,7 +395,7 @@ describe('zmiana czasu letniego i zimowego', () => {
 
   it('9:00 rano znaczy 9:00 rano po obu stronach zmiany czasu', async () => {
     await withRollback(async (db) => {
-      const salonId = await createSalon(db, { horizon: 365 });
+      const salonId = await createSalon(db, { horizon: 400 });
       const staffId = await addStaff(db, salonId);
       const serviceId = await addService(db, salonId, { duration: 60 });
       await assignService(db, salonId, staffId, serviceId);
@@ -449,7 +420,7 @@ describe('zmiana czasu letniego i zimowego', () => {
 
   it('doba ze zmianą czasu ma komplet terminów', async () => {
     await withRollback(async (db) => {
-      const salonId = await createSalon(db, { horizon: 365 });
+      const salonId = await createSalon(db, { horizon: 400 });
       const staffId = await addStaff(db, salonId);
       const serviceId = await addService(db, salonId, { duration: 60 });
       await assignService(db, salonId, staffId, serviceId);

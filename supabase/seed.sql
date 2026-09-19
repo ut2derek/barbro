@@ -16,21 +16,15 @@ returns void
 language plpgsql
 as $$
 begin
-  -- Pola tokenów muszą być pustymi napisami, a nie wartościami pustymi —
-  -- system logowania czyta je bezwarunkowo i na NULL-u zwraca błąd 500.
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
     email_confirmed_at, created_at, updated_at,
-    raw_app_meta_data, raw_user_meta_data,
-    confirmation_token, recovery_token,
-    email_change, email_change_token_new, email_change_token_current,
-    phone_change, phone_change_token, reauthentication_token
+    raw_app_meta_data, raw_user_meta_data
   ) values (
     '00000000-0000-0000-0000-000000000000', p_id, 'authenticated', 'authenticated', p_email,
     crypt('haslo123', gen_salt('bf')),
     now(), now(), now(),
-    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
-    '', '', '', '', '', '', '', ''
+    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb
   );
 
   insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
@@ -53,17 +47,12 @@ insert into public.app_admins (user_id) values ('10000000-0000-0000-0000-0000000
 -- Salony
 -- ---------------------------------------------------------------------------
 
--- Grafiki testowe pochodzą z publicznego serwisu z losowymi zdjęciami —
--- służą wyłącznie podglądowi układu strony rezerwacji.
-insert into public.salons (id, name, slug, brand_color, logo_url, cover_url, address_line, postal_code, city, phone, email, auto_accept)
+insert into public.salons (id, name, slug, brand_color, address_line, postal_code, city, phone, email, auto_accept)
 values
   ('20000000-0000-0000-0000-000000000001', 'Barbershop Kowalski', 'barbershop-kowalski',
-   '#1F1F23',
-   'https://picsum.photos/seed/barbro-logo/240/240',
-   'https://picsum.photos/seed/barbro-cover/1200/480',
-   'ul. Długa 12', '00-238', 'Warszawa', '+48 500 100 200', 'kontakt@kowalski.test', false),
+   '#1F1F23', 'ul. Długa 12', '00-238', 'Warszawa', '+48 500 100 200', 'kontakt@kowalski.test', false),
   ('20000000-0000-0000-0000-000000000002', 'Salon Obcy', 'salon-obcy',
-   '#3355FF', null, null, 'ul. Inna 3', '30-001', 'Kraków', '+48 500 900 900', 'kontakt@obcy.test', true);
+   '#3355FF', 'ul. Inna 3', '30-001', 'Kraków', '+48 500 900 900', 'kontakt@obcy.test', true);
 
 insert into public.salon_members (salon_id, user_id, role) values
   ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'owner'),
@@ -128,15 +117,6 @@ set price_grosz_override = 7000, duration_minutes_override = 40
 where staff_id = '30000000-0000-0000-0000-000000000002'
   and service_id = '50000000-0000-0000-0000-000000000001';
 
--- Dodatki do usług — doczepiane przy rezerwacji, wydłużają wizytę.
-insert into public.service_addons (salon_id, service_id, name, description, price_grosz, duration_minutes, max_quantity, sort_order) values
-  ('20000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001',
-   'Tuszowanie siwizny', 'Tuszowanie siwych włosów odpowiednio dobraną koloryzacją.', 5000, 20, 1, 1),
-  ('20000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001',
-   'Depilacja woskiem nosa', 'Usuwanie nadmiernego owłosienia z nosa woskiem. Szybki zabieg.', 1000, 5, 1, 2),
-  ('20000000-0000-0000-0000-000000000001', null,
-   'Mycie i stylizacja', 'Mycie włosów i ułożenie na koniec wizyty.', 2000, 10, 1, 3);
-
 -- ---------------------------------------------------------------------------
 -- Godziny otwarcia i grafiki
 -- ---------------------------------------------------------------------------
@@ -199,12 +179,12 @@ insert into public.clients (id, salon_id, first_name, last_name, email, phone, i
 -- ---------------------------------------------------------------------------
 
 -- Dzisiaj 10:00 u Marka — potwierdzona, strzyżenie.
-insert into public.bookings (id, salon_id, staff_id, client_id, starts_at, ends_at, buffer_after_minutes, status, total_price_grosz, source)
+insert into public.bookings (id, salon_id, staff_id, client_id, starts_at, ends_at, status, total_price_grosz, source)
 values ('70000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001',
         '30000000-0000-0000-0000-000000000001', '60000000-0000-0000-0000-000000000001',
         (current_date + time '10:00') at time zone 'Europe/Warsaw',
         (current_date + time '10:45') at time zone 'Europe/Warsaw',
-        5, 'confirmed', 8000, 'web');
+        'confirmed', 8000, 'web');
 
 insert into public.booking_items (salon_id, booking_id, service_id, item_order, name_snapshot, price_grosz, duration_minutes, buffer_after_minutes)
 values ('20000000-0000-0000-0000-000000000001', '70000000-0000-0000-0000-000000000001',

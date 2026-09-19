@@ -1,13 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View, type ColorValue } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { usePendingApprovalCount } from '@/features/bookings/queries';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
-import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import { t } from '@/i18n';
 import { useTheme } from '@/theme';
 
@@ -18,8 +17,8 @@ type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
 /** Ikona zakładki: wypełniona, gdy zakładka jest aktywna. */
 function tabIcon(active: IconName, inactive: IconName) {
-  return function Icon({ color, focused }: { color: ColorValue; focused: boolean }) {
-    return <Ionicons name={focused ? active : inactive} size={24} color={color as string} />;
+  return function Icon({ color, focused }: { color: string; focused: boolean }) {
+    return <Ionicons name={focused ? active : inactive} size={24} color={color} />;
   };
 }
 
@@ -32,8 +31,7 @@ export default function TabsLayout() {
   const theme = useTheme();
   const router = useRouter();
   const { data: salon } = useCurrentSalon();
-  const zone = useSalonTimezone();
-  const { data: pending = 0 } = usePendingApprovalCount({ salonId: salon?.salonId, zone });
+  const { data: pending = 0 } = usePendingApprovalCount(salon?.salonId);
 
   const [actionsOpen, setActionsOpen] = useState(false);
 

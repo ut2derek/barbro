@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -12,16 +13,16 @@ import { useCurrentSalon } from '@/features/salon/use-current-salon';
 import { t } from '@/i18n';
 import { formatFullDate } from '@/lib/format';
 import { useTheme } from '@/theme';
-import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 
+const ZONE = 'Europe/Warsaw';
 
 /**
  * Opinie klientów. Salon może odpowiedzieć, ale nie może usunąć ani ukryć —
  * dlatego w ogóle warto je czytać.
  */
 export default function ReviewsScreen() {
-  const zone = useSalonTimezone();
   const theme = useTheme();
+  const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: reviews, isPending } = useSalonReviews(salon?.salonId);
   const { data: rating } = useSalonRating(salon?.salonId);
@@ -33,6 +34,7 @@ export default function ReviewsScreen() {
   return (
     <Screen scroll>
       <View style={{ gap: theme.spacing.xs }}>
+        <Text variant="title">{t('reviews.title')}</Text>
         {rating?.average ? (
           <Stars value={rating.average} count={rating.count} />
         ) : (
@@ -59,7 +61,7 @@ export default function ReviewsScreen() {
             >
               <Stars value={review.rating} count={null} />
               <Text variant="small" tone="muted">
-                {formatFullDate(review.createdAt, zone)}
+                {formatFullDate(review.createdAt, ZONE)}
               </Text>
             </View>
 
@@ -121,6 +123,11 @@ export default function ReviewsScreen() {
         ))
       )}
 
+      <Button
+        label={t('common.back')}
+        variant="secondary"
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)/more'))}
+      />
     </Screen>
   );
 }

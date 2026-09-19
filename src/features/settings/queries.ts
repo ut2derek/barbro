@@ -1,7 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import type { Database } from '@/lib/database.types';
-import { invalidateSalonSettings, queryKeys } from '@/lib/query-keys';
 import { getSupabase } from '@/lib/supabase';
 
 export type SalonSettings = {
@@ -27,7 +25,7 @@ export type SalonSettings = {
 
 export function useSalonSettings(salonId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.salonSettings(salonId),
+    queryKey: ['salon-settings', salonId],
     enabled: Boolean(salonId),
     queryFn: async (): Promise<SalonSettings> => {
       const { data, error } = await getSupabase()
@@ -69,8 +67,8 @@ export function useUpdateSalonSettings() {
     mutationFn: async (args: { salonId: string; changes: Partial<SalonSettings> }) => {
       const { changes } = args;
 
-      // Kształt zgodny ze schematem bazy — literówka w nazwie kolumny nie przejdzie.
-      const payload: Database['public']['Tables']['salons']['Update'] = {};
+      // Nazwy kolumn trzymamy w jednym miejscu, żeby literówka nie przeszła cicho.
+      const payload: Record<string, unknown> = {};
       if (changes.name !== undefined) payload.name = changes.name.trim();
       if (changes.brandColor !== undefined) payload.brand_color = changes.brandColor;
       if (changes.addressLine !== undefined) payload.address_line = changes.addressLine;
@@ -96,8 +94,11 @@ export function useUpdateSalonSettings() {
       const { error } = await getSupabase().from('salons').update(payload).eq('id', args.salonId);
       if (error) throw error;
     },
-    // Zmiana siatki, wyprzedzenia, strefy czy horyzontu zmienia wolne terminy
-    // i wygląd — pełna lista jest w `lib/query-keys`.
-    onSuccess: () => invalidateSalonSettings(queryClient),
+    onSuccess: (_result, variables) => {
+      void queryClient.invalidateQueries({ queryKey: ['salon-settings', variables.salonId] });
+      void queryClient.invalidateQueries({ queryKey: ['current-salon'] });
+      // Zmiana siatki, wyprzedzenia czy horyzontu zmienia wolne terminy.
+      void queryClient.invalidateQueries({ queryKey: ['slots'] });
+    },
   });
 }

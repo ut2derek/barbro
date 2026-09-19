@@ -126,7 +126,7 @@ export function usePublicBookingFlow(slug: string | undefined) {
     setPendingSlot(null);
   }
 
-  function selectDay(next: DateTime<true>) {
+  function selectDay(next: DateTime) {
     setDay(next);
     setPendingSlot(null);
   }

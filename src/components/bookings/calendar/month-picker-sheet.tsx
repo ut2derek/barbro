@@ -16,10 +16,10 @@ export function MonthPickerSheet({
   onPick,
 }: {
   visible: boolean;
-  current: DateTime<true>;
+  current: DateTime;
   zone: string;
   onClose: () => void;
-  onPick: (day: DateTime<true>) => void;
+  onPick: (day: DateTime) => void;
 }) {
   const theme = useTheme();
   // Klucz na arkuszu (niżej w ekranie) sprawia, że rok startuje od aktualnie
@@ -76,11 +76,7 @@ export function MonthPickerSheet({
                   onPress={() => {
                     // Zachowujemy dzień miesiąca, o ile istnieje w nowym miesiącu.
                     const target = DateTime.fromObject({ year, month, day: 1 }, { zone });
-                    onPick(
-                      target.set({
-                        day: Math.min(current.day, target.daysInMonth ?? 28),
-                      }) as DateTime<true>,
-                    );
+                    onPick(target.set({ day: Math.min(current.day, target.daysInMonth ?? 28) }));
                   }}
                   style={{
                     width: '30%',

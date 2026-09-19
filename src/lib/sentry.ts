@@ -16,20 +16,6 @@ export function initSentry() {
 }
 
 /**
- * Błąd, którego się spodziewamy i który pokazujemy użytkownikowi — na przykład
- * „Podaj prawidłowy adres e-mail" albo „Ten termin właśnie się zajął".
- * Taki błąd nie jest awarią, więc nie zaśmieca Sentry.
- */
-export function markExpected<T extends Error>(error: T): T {
-  (error as Error & { expected?: boolean }).expected = true;
-  return error;
-}
-
-function isExpected(error: unknown): boolean {
-  return Boolean((error as { expected?: boolean } | null)?.expected);
-}
-
-/**
  * Zgłoszenie błędu. Jedyna droga, którą błąd ma opuścić aplikację — nie
  * używamy `console.error`, bo na telefonie użytkownika nikt go nie przeczyta.
  *
@@ -37,8 +23,6 @@ function isExpected(error: unknown): boolean {
  * w Sentry dało się grupować bez czytania stosu wywołań.
  */
 export function captureError(error: unknown, where: string, extra?: Record<string, unknown>) {
-  if (isExpected(error)) return;
-
   if (__DEV__) {
     console.error(`[${where}]`, error, extra ?? '');
   }
