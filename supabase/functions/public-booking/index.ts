@@ -23,11 +23,17 @@ import { reportError } from '../_shared/observability.ts';
 import { withinLimit } from '../_shared/rate-limit.ts';
 import { book } from './booking.ts';
 import { catalog, reviews, slots } from './salon.ts';
-import { ACTIONS, type Action, firstIssue, requestSchemas } from './schemas.ts';
+import { ACTIONS, type Action, type RequestOf, firstIssue, requestSchemas } from './schemas.ts';
 import { cancelBooking, confirmBooking, readBooking, reviewState, submitReview } from './visit.ts';
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const handlers: Record<Action, (body: any) => Promise<Response>> = {
+/**
+ * Każda obsługa dostaje dokładnie to, co opisuje jej schemat — dzięki temu
+ * dopisanie pola w `schemas.ts` bez użycia go w obsłudze (albo odwrotnie)
+ * wychodzi od razu, a nie dopiero na produkcji.
+ */
+type Handlers = { [A in Action]: (body: RequestOf<A>) => Promise<Response> };
+
+const handlers: Handlers = {
   catalog,
   slots,
   book,
@@ -70,7 +76,11 @@ Deno.serve(async (req) => {
       return json({ error: firstIssue(parsed.error) }, 400);
     }
 
-    return await handlers[action](parsed.data);
+    // Zgodność typu obsługi ze schematem pilnuje `Handlers` wyżej; tutaj
+    // TypeScript nie umie sparować dwóch sum (obsługa × dane), więc jedno
+    // rzutowanie w rozdzielni zastępuje `any` przy każdej obsłudze.
+    const handle = handlers[action] as (body: unknown) => Promise<Response>;
+    return await handle(parsed.data);
   } catch (error) {
     reportError(error, 'strona rezerwacji', { action });
     return json({ error: 'Coś poszło nie tak. Spróbuj ponownie.' }, 500);

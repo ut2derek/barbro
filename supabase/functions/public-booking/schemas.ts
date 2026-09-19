@@ -10,7 +10,13 @@ import { z } from 'npm:zod@^4.6.5';
 /** Slug salonu z adresu strony: małe litery, cyfry i myślniki. */
 const slug = z.string().trim().min(1).max(120).regex(/^[a-z0-9-]+$/, 'Nieprawidłowy adres salonu');
 
-const uuid = z.string().uuid();
+/**
+ * Format identyfikatora, bez sprawdzania wersji. `z.uuid()` w Zodzie 4 wymaga
+ * poprawnych bitów wersji, więc odrzucałby identyfikatory, które Postgres
+ * przyjmuje bez zastrzeżeń (choćby te z danych testowych) — a walidacja ma
+ * chronić przed wstrzyknięciem, nie recenzować sposób losowania.
+ */
+const uuid = z.guid();
 
 /** Token z linku w mailu — 24 bajty zapisane szesnastkowo. */
 const token = z.string().regex(/^[0-9a-f]{48}$/, 'Nieprawidłowy link');

@@ -9,18 +9,8 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS, 'Content-Type': 'application/json' },
-  });
-}
+import { CORS, json } from '../_shared/http.ts';
+import { reportError } from '../_shared/observability.ts';
 
 function randomPassword(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(12));
@@ -114,7 +104,7 @@ Deno.serve(async (req) => {
 
     return json({ salonId: salon.id, slug, ownerId, temporaryPassword });
   } catch (error) {
-    console.error('Zakładanie salonu nie powiodło się', error);
+    reportError(error, 'zakładanie salonu');
     return json({ error: 'Nie udało się założyć salonu' }, 500);
   }
 });
