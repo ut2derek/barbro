@@ -30,8 +30,8 @@ Jedna aplikacja pod własną marką produktu w App Store i Google Play. Barber p
 zalogowaniu widzi logo i kolor swojego salonu. Strona rezerwacji dla klientów
 końcowych ma branding salonu.
 
-- Nazwa produktu: **do ustalenia** (robocza: `Barbo`)
-- Identyfikator aplikacji: **do ustalenia** (roboczy: `pl.barbo.app`) —
+- Nazwa produktu: **Barbro**
+- Identyfikator aplikacji: `pl.barbro.app` —
   po publikacji nie da się go zmienić
 - Domena: **do ustalenia** — potrzebna do maili (Resend), linków głębokich
   i polityki prywatności

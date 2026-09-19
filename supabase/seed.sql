@@ -2,10 +2,10 @@
 -- NIGDY nie trafiają na produkcję.
 --
 -- Konta testowe (hasło dla wszystkich: haslo123):
---   admin@barbo.test      administrator platformy
---   wlasciciel@barbo.test właściciel salonu „Barbershop Kowalski”
---   pracownik@barbo.test  pracownik tego salonu
---   obcy@barbo.test       właściciel innego salonu — służy do sprawdzania izolacji danych
+--   admin@barbro.test      administrator platformy
+--   wlasciciel@barbro.test właściciel salonu „Barbershop Kowalski”
+--   pracownik@barbro.test  pracownik tego salonu
+--   obcy@barbro.test       właściciel innego salonu — służy do sprawdzania izolacji danych
 
 -- ---------------------------------------------------------------------------
 -- Konta
@@ -36,10 +36,10 @@ begin
 end;
 $$;
 
-select pg_temp.create_test_user('10000000-0000-0000-0000-000000000001', 'admin@barbo.test');
-select pg_temp.create_test_user('10000000-0000-0000-0000-000000000002', 'wlasciciel@barbo.test');
-select pg_temp.create_test_user('10000000-0000-0000-0000-000000000003', 'pracownik@barbo.test');
-select pg_temp.create_test_user('10000000-0000-0000-0000-000000000004', 'obcy@barbo.test');
+select pg_temp.create_test_user('10000000-0000-0000-0000-000000000001', 'admin@barbro.test');
+select pg_temp.create_test_user('10000000-0000-0000-0000-000000000002', 'wlasciciel@barbro.test');
+select pg_temp.create_test_user('10000000-0000-0000-0000-000000000003', 'pracownik@barbro.test');
+select pg_temp.create_test_user('10000000-0000-0000-0000-000000000004', 'obcy@barbro.test');
 
 insert into public.app_admins (user_id) values ('10000000-0000-0000-0000-000000000001');
 

@@ -1,20 +1,20 @@
 {
   "expo": {
-    "name": "Barbo",
-    "slug": "barbo",
+    "name": "Barbro",
+    "slug": "barbro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "barbo",
+    "scheme": "barbro",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "bundleIdentifier": "pl.barbo.app",
+      "bundleIdentifier": "pl.barbro.app",
       "supportsTablet": false,
       "icon": "./assets/expo.icon"
     },
     "android": {
-      "package": "pl.barbo.app",
+      "package": "pl.barbro.app",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

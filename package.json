@@ -1,5 +1,5 @@
 {
-  "name": "barbo",
+  "name": "barbro",
   "main": "expo-router/entry",
   "version": "0.1.0",
   "dependencies": {
@@ -35,9 +35,12 @@
   },
   "devDependencies": {
     "@types/luxon": "^3.7.5",
+    "@types/pg": "^8.23.1",
     "@types/react": "~19.2.2",
+    "pg": "^8.23.0",
     "supabase": "^2.117.0",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.1"
   },
   "scripts": {
     "start": "expo start",
@@ -48,7 +51,9 @@
     "typecheck": "tsc --noEmit",
     "db:start": "supabase start",
     "db:stop": "supabase stop",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "private": true
 }
