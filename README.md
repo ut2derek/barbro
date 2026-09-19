@@ -30,7 +30,9 @@ Zeskanuj kod QR aplikacją Expo Go (Android) lub Aparatem (iOS).
 | `npm run ios` / `npm run android` | uruchamia w symulatorze |
 | `npm run typecheck` | sprawdza typy |
 | `npm run lint` | sprawdza styl kodu |
+| `npm test` | testy reguł i ograniczeń w bazie (wymaga działającej bazy) |
 | `npm run db:start` | lokalna baza Supabase (wymaga Dockera) |
+| `npm run db:stop` | zatrzymuje lokalną bazę |
 | `npm run db:reset` | wgrywa migracje i dane testowe od zera |
 
 ## Struktura
@@ -49,3 +51,20 @@ supabase/         migracje, funkcje serwerowe, dane testowe
 
 Sekrety nigdy nie trafiają do repozytorium. Wszystko przez `.env.local`
 (wzór w `.env.example`).
+
+## Lokalna baza
+
+`npm run db:start` stawia komplet: Postgres, API, Auth i podgląd danych.
+
+| Co | Adres |
+|---|---|
+| Podgląd danych (Studio) | http://127.0.0.1:54323 |
+| API | http://127.0.0.1:54321 |
+| Skrzynka na maile testowe | http://127.0.0.1:54324 |
+
+Konta testowe (hasło `haslo123`): `wlasciciel@barbro.test`, `pracownik@barbro.test`,
+`admin@barbro.test`, `obcy@barbro.test`. Pełny opis danych testowych:
+[supabase/seed.sql](supabase/seed.sql).
+
+Telefon łączy się z bazą po adresie IP komputera — jeśli zmienisz sieć Wi-Fi,
+zaktualizuj `EXPO_PUBLIC_SUPABASE_URL` w `.env.local`.

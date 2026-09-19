@@ -11,15 +11,26 @@ const OVERLAP_ERROR = '23P01'; // naruszenie ograniczenia wykluczającego
 
 async function insertBooking(
   db: Awaited<ReturnType<typeof withRollback>> extends never ? never : any,
-  opts: { staffId: string; dayOffset: number; from: string; to: string; status?: string },
+  opts: {
+    staffId: string;
+    dayOffset: number;
+    from: string;
+    to: string;
+    status?: string;
+    comment?: string;
+  },
 ) {
   return db.query(`
-    insert into public.bookings (salon_id, staff_id, client_id, starts_at, ends_at, status, total_price_grosz, source)
+    insert into public.bookings (
+      salon_id, staff_id, client_id, starts_at, ends_at, status,
+      total_price_grosz, source, cancellation_comment
+    )
     values (
       '${SALONS.main}', '${opts.staffId}', '${CLIENTS.anna}',
       ${warsawTime(opts.dayOffset, opts.from)},
       ${warsawTime(opts.dayOffset, opts.to)},
-      '${opts.status ?? 'confirmed'}', 8000, 'manual'
+      '${opts.status ?? 'confirmed'}', 8000, 'manual',
+      ${opts.comment ? `'${opts.comment}'` : 'null'}
     )
     returning id
   `);
@@ -80,6 +91,8 @@ describe('blokada podwójnej rezerwacji', () => {
         from: '10:00',
         to: '11:00',
         status,
+        // Anulowanie przez salon bez komentarza jest niedopuszczalne (reguła 7).
+        comment: status === 'cancelled_by_salon' ? 'Fryzjer zachorował' : undefined,
       });
 
       const result = await insertBooking(db, {
