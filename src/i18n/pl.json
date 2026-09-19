@@ -1,0 +1,22 @@
+{
+  "common": {
+    "appName": "Barbo",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "retry": "Spróbuj ponownie",
+    "loading": "Ładowanie…"
+  },
+  "setup": {
+    "title": "Fundament gotowy",
+    "subtitle": "Aplikacja uruchamia się, wygląd oparty na tokenach, klient bazy podpięty.",
+    "envHeading": "Konfiguracja",
+    "supabaseOk": "Supabase: połączenie skonfigurowane",
+    "supabaseMissing": "Supabase: brak konfiguracji (.env.local)",
+    "sentryOk": "Sentry: włączony",
+    "sentryMissing": "Sentry: wyłączony (brak DSN)",
+    "environment": "Środowisko: {environment}",
+    "connectionCheck": "Sprawdź połączenie z bazą",
+    "connectionOk": "Baza odpowiada poprawnie",
+    "connectionFailed": "Baza nie odpowiada: {message}"
+  }
+}
