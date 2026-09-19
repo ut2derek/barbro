@@ -168,6 +168,11 @@ export default function ServicesScreen() {
               variant="secondary"
               onPress={() => router.push('/(app)/services/categories')}
             />
+            <Button
+              label={t('addonsAdmin.title')}
+              variant="secondary"
+              onPress={() => router.push('/(app)/addons')}
+            />
           </>
         ) : null}
       </ScrollView>

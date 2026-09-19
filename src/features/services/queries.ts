@@ -256,3 +256,110 @@ export function useDeleteCategory() {
     onSuccess: invalidate,
   });
 }
+
+export type ServiceAddon = {
+  id: string;
+  /** Puste = dodatek proponowany przy każdej usłudze salonu. */
+  serviceId: string | null;
+  serviceName: string | null;
+  name: string;
+  description: string | null;
+  priceGrosz: number;
+  durationMinutes: number;
+  maxQuantity: number;
+  active: boolean;
+  sortOrder: number;
+};
+
+export function useServiceAddons(salonId: string | undefined) {
+  return useQuery({
+    queryKey: ['service-addons', salonId],
+    enabled: Boolean(salonId),
+    queryFn: async (): Promise<ServiceAddon[]> => {
+      const { data, error } = await getSupabase()
+        .from('service_addons')
+        .select(
+          'id, service_id, name, description, price_grosz, duration_minutes, max_quantity, active, sort_order, services ( name )',
+        )
+        .eq('salon_id', salonId!)
+        .order('sort_order');
+
+      if (error) throw error;
+
+      return data.map((addon) => ({
+        id: addon.id,
+        serviceId: addon.service_id,
+        serviceName: (addon.services as unknown as { name: string } | null)?.name ?? null,
+        name: addon.name,
+        description: addon.description,
+        priceGrosz: addon.price_grosz,
+        durationMinutes: addon.duration_minutes,
+        maxQuantity: addon.max_quantity,
+        active: addon.active,
+        sortOrder: addon.sort_order,
+      }));
+    },
+  });
+}
+
+export type AddonInput = {
+  salonId: string;
+  id?: string;
+  serviceId: string | null;
+  name: string;
+  description: string | null;
+  priceGrosz: number;
+  durationMinutes: number;
+  maxQuantity: number;
+  active: boolean;
+  sortOrder?: number;
+};
+
+export function useSaveAddon() {
+  const invalidate = useServiceInvalidation();
+
+  return useMutation({
+    mutationFn: async (input: AddonInput) => {
+      const payload = {
+        salon_id: input.salonId,
+        service_id: input.serviceId,
+        name: input.name.trim(),
+        description: input.description?.trim() || null,
+        price_grosz: input.priceGrosz,
+        duration_minutes: input.durationMinutes,
+        max_quantity: input.maxQuantity,
+        active: input.active,
+        ...(input.sortOrder !== undefined ? { sort_order: input.sortOrder } : {}),
+      };
+
+      const supabase = getSupabase();
+
+      if (input.id) {
+        const { error } = await supabase.from('service_addons').update(payload).eq('id', input.id);
+        if (error) throw error;
+        return input.id;
+      }
+
+      const { data, error } = await supabase
+        .from('service_addons')
+        .insert(payload)
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data.id;
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeleteAddon() {
+  const invalidate = useServiceInvalidation();
+
+  return useMutation({
+    mutationFn: async (addonId: string) => {
+      const { error } = await getSupabase().from('service_addons').delete().eq('id', addonId);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+}
