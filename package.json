@@ -56,7 +56,8 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:types": "supabase gen types typescript --local > src/lib/database.types.ts"
   },
   "private": true
 }
