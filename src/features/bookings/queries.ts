@@ -209,3 +209,182 @@ export function useAvailableSlots(args: {
     },
   });
 }
+
+/** Ręczne dopisanie wizyty przez salon. Całość liczy i zapisuje funkcja w bazie. */
+export function useCreateBooking() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: {
+      salonId: string;
+      staffId: string;
+      clientId: string;
+      serviceIds: string[];
+      startsAt: string;
+      note?: string;
+    }): Promise<string> => {
+      const { data, error } = await getSupabase().rpc('create_booking', {
+        p_salon_id: args.salonId,
+        p_staff_id: args.staffId,
+        p_client_id: args.clientId,
+        p_service_ids: args.serviceIds,
+        p_starts_at: args.startsAt,
+        p_source: 'manual',
+        p_client_note: args.note ?? undefined,
+      });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      void queryClient.invalidateQueries({ queryKey: ['slots'] });
+    },
+  });
+}
+
+export type TimeBlock = {
+  id: string;
+  staffId: string;
+  staffName: string;
+  startsAt: string;
+  endsAt: string;
+  reason: string | null;
+};
+
+export function useDayTimeBlocks(args: {
+  salonId: string | undefined;
+  zone: string;
+  day: DateTime;
+  staffId?: string | null;
+}) {
+  const dayKey = args.day.setZone(args.zone).toISODate();
+
+  return useQuery({
+    queryKey: ['time-blocks', args.salonId, dayKey, args.staffId ?? 'all'],
+    enabled: Boolean(args.salonId),
+    queryFn: async (): Promise<TimeBlock[]> => {
+      const start = args.day.setZone(args.zone).startOf('day');
+      const end = start.plus({ days: 1 });
+
+      let request = getSupabase()
+        .from('time_blocks')
+        .select('id, staff_id, starts_at, ends_at, reason, staff ( display_name )')
+        .eq('salon_id', args.salonId!)
+        .gte('starts_at', start.toISO()!)
+        .lt('starts_at', end.toISO()!)
+        .order('starts_at');
+
+      if (args.staffId) request = request.eq('staff_id', args.staffId);
+
+      const { data, error } = await request;
+      if (error) throw error;
+
+      return data.map((row) => ({
+        id: row.id,
+        staffId: row.staff_id,
+        staffName: (row.staff as unknown as { display_name: string } | null)?.display_name ?? '',
+        startsAt: row.starts_at,
+        endsAt: row.ends_at,
+        reason: row.reason,
+      }));
+    },
+  });
+}
+
+export function useCreateTimeBlock() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (args: {
+      salonId: string;
+      staffId: string;
+      startsAt: string;
+      endsAt: string;
+      reason?: string;
+    }) => {
+      const { error } = await getSupabase().from('time_blocks').insert({
+        salon_id: args.salonId,
+        staff_id: args.staffId,
+        starts_at: args.startsAt,
+        ends_at: args.endsAt,
+        reason: args.reason?.trim() || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['time-blocks'] });
+      void queryClient.invalidateQueries({ queryKey: ['slots'] });
+    },
+  });
+}
+
+export function useDeleteTimeBlock() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (blockId: string) => {
+      const { error } = await getSupabase().from('time_blocks').delete().eq('id', blockId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['time-blocks'] });
+      void queryClient.invalidateQueries({ queryKey: ['slots'] });
+    },
+  });
+}
+
+/** Wizyty całego tygodnia jednym zapytaniem — widok tygodnia grupuje je po dniach. */
+export function useWeekBookings(args: {
+  salonId: string | undefined;
+  zone: string;
+  weekStart: DateTime;
+  staffId?: string | null;
+}) {
+  const weekKey = args.weekStart.setZone(args.zone).toISODate();
+
+  return useQuery({
+    queryKey: ['bookings-week', args.salonId, weekKey, args.staffId ?? 'all'],
+    enabled: Boolean(args.salonId),
+    queryFn: async (): Promise<BookingListItem[]> => {
+      const start = args.weekStart.setZone(args.zone).startOf('day');
+      const end = start.plus({ days: 7 });
+
+      let request = getSupabase()
+        .from('bookings')
+        .select(BOOKING_FIELDS)
+        .eq('salon_id', args.salonId!)
+        .gte('starts_at', start.toISO()!)
+        .lt('starts_at', end.toISO()!)
+        .order('starts_at');
+
+      if (args.staffId) request = request.eq('staff_id', args.staffId);
+
+      const { data, error } = await request;
+      if (error) throw error;
+
+      return (data as unknown as BookingRow[]).map(toListItem);
+    },
+  });
+}
+
+/** Liczba wizyt czekających na akceptację — pokazywana kropką na zakładce „Dziś”. */
+export function usePendingApprovalCount(salonId: string | undefined) {
+  return useQuery({
+    queryKey: ['pending-approval-count', salonId],
+    enabled: Boolean(salonId),
+    refetchInterval: 60_000,
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await getSupabase()
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('salon_id', salonId!)
+        .eq('status', 'pending_approval')
+        // Wizyta sprzed godziny, której nikt nie zaakceptował, nadal wymaga
+        // decyzji — liczymy od początku dzisiejszego dnia, nie od „teraz”.
+        .gte('starts_at', DateTime.now().setZone('Europe/Warsaw').startOf('day').toISO()!);
+
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}
