@@ -53,7 +53,7 @@ export default function AddonsScreen() {
   return (
     <Screen scroll>
       <Text variant="title">{t('addonsAdmin.title')}</Text>
-      <Text tone="secondary">{t('addonsAdmin.description')}</Text>
+      <Text tone="secondary">{t('addonsAdmin.intro')}</Text>
 
       {isPending ? (
         <Text tone="muted">{t('common.loading')}</Text>

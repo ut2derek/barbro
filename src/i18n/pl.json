@@ -363,7 +363,9 @@
     "accountDescription": "Wylogowanie i usunięcie konta.",
     "adminDescription": "Salony na platformie — widok właściciela produktu.",
     "switchAccount": "Przełącz konto testowe",
-    "switchAccountHint": "Widoczne tylko w trybie deweloperskim — wylogowuje i loguje wybranym kontem."
+    "switchAccountHint": "Widoczne tylko w trybie deweloperskim — wylogowuje i loguje wybranym kontem.",
+    "reviews": "Opinie",
+    "reviewsDescription": "Oceny klientów i odpowiedzi salonu."
   },
   "clients": {
     "title": "Klienci",
@@ -383,7 +385,9 @@
     "blockClient": "Zablokuj klienta",
     "blockHint": "Zablokowany klient nie zarezerwuje wizyty przez internet.",
     "history": "Historia wizyt",
-    "noHistory": "Ten klient nie ma jeszcze żadnej wizyty."
+    "noHistory": "Ten klient nie ma jeszcze żadnej wizyty.",
+    "rating": "Ocena klienta",
+    "ratingHint": "Widoczna wyłącznie dla zespołu — klient jej nie zobaczy. Dotknij tej samej gwiazdki, żeby skasować ocenę."
   },
   "publicBooking": {
     "stepServices": "Wybierz usługi",
@@ -493,6 +497,31 @@
     "saveError": "Nie udało się zapisać dodatku.",
     "delete": "Usuń dodatek",
     "deleteWarning": "Dodatek zniknie z rezerwacji. Wizyty już umówione zostają — mają zapisaną własną nazwę i cenę.",
-    "deleteConfirm": "Usuń na zawsze"
+    "deleteConfirm": "Usuń na zawsze",
+    "intro": "Drobne zabiegi doczepiane przy rezerwacji. Każdy ma własną cenę i wydłuża wizytę."
+  },
+  "reviews": {
+    "title": "Opinie",
+    "starLabel": "{count} na 5",
+    "rateVisitTitle": "Jak było?",
+    "rateVisitDescription": "Twoja opinia pojawi się przy salonie i fryzjerze.",
+    "comment": "Komentarz (opcjonalnie)",
+    "commentPlaceholder": "Co się podobało, a co można poprawić?",
+    "submit": "Wystaw opinię",
+    "submitted": "Dziękujemy za opinię!",
+    "yourReview": "Twoja opinia",
+    "salonReply": "Odpowiedź salonu",
+    "pickRating": "Wybierz liczbę gwiazdek.",
+    "submitError": "Nie udało się zapisać opinii.",
+    "empty": "Ten salon nie ma jeszcze opinii.",
+    "sectionTitle": "Opinie klientów"
+  },
+  "reviewsAdmin": {
+    "noneYet": "Brak opinii — pojawią się po pierwszych zrealizowanych wizytach.",
+    "policy": "Opinii nie da się usunąć ani ukryć. Można na nie odpowiedzieć — odpowiedź widzi każdy, kto czyta opinię.",
+    "reply": "Odpowiedz",
+    "editReply": "Zmień odpowiedź",
+    "replyLabel": "Odpowiedź salonu",
+    "replyPlaceholder": "Dziękujemy za opinię…"
   }
 }
