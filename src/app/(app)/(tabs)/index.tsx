@@ -4,10 +4,10 @@ import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BookingCard } from '@/components/bookings/booking-card';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { useDayBookings } from '@/features/bookings/queries';
+import { useQuickBookingAction } from '@/features/bookings/use-quick-action';
 import { ACTIVE_STATUSES } from '@/features/bookings/status';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
 import { t } from '@/i18n';
@@ -19,6 +19,7 @@ export default function TodayScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { data: salon } = useCurrentSalon();
+  const quickAction = useQuickBookingAction();
   const zone = 'Europe/Warsaw';
   const today = DateTime.now().setZone(zone);
 
@@ -81,6 +82,7 @@ export default function TodayScreen() {
               zone={zone}
               showStaff
               onPress={() => router.push(`/(app)/booking/${booking.id}`)}
+              onQuickAction={quickAction}
             />
           ))
         ) : (
@@ -90,7 +92,6 @@ export default function TodayScreen() {
           </Card>
         )}
 
-        <Button label={t('newBooking.title')} onPress={() => router.push('/(app)/new-booking')} />
       </ScrollView>
     </SafeAreaView>
   );

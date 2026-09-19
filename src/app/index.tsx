@@ -9,5 +9,5 @@ export default function Entry() {
   // Jeszcze sprawdzamy zapisaną sesję — nie migamy ekranem logowania.
   if (session === undefined) return <Loading />;
 
-  return <Redirect href={session ? '/(app)' : '/(auth)/login'} />;
+  return <Redirect href={session ? '/(app)/(tabs)' : '/(auth)/login'} />;
 }

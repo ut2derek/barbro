@@ -5,7 +5,6 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BookingCard } from '@/components/bookings/booking-card';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { Text } from '@/components/ui/text';
@@ -16,6 +15,7 @@ import {
   useWeekBookings,
   type BookingListItem,
 } from '@/features/bookings/queries';
+import { useQuickBookingAction } from '@/features/bookings/use-quick-action';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
 import { t } from '@/i18n';
 import {
@@ -36,6 +36,7 @@ export default function CalendarScreen() {
   const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: staff } = useSalonStaff(salon?.salonId);
+  const quickAction = useQuickBookingAction();
 
   const [mode, setMode] = useState<Mode>('day');
   const [day, setDay] = useState(() => DateTime.now().setZone(ZONE).startOf('day'));
@@ -182,6 +183,7 @@ export default function CalendarScreen() {
                   zone={ZONE}
                   showStaff={staffId === null}
                   onPress={() => router.push(`/(app)/booking/${booking.id}`)}
+                  onQuickAction={quickAction}
                 />
               ))
             ) : (
@@ -239,6 +241,7 @@ export default function CalendarScreen() {
                     zone={ZONE}
                     showStaff={staffId === null}
                     onPress={() => router.push(`/(app)/booking/${booking.id}`)}
+                    onQuickAction={quickAction}
                   />
                 ))}
               </View>
@@ -246,12 +249,6 @@ export default function CalendarScreen() {
           })
         )}
 
-        <Button label={t('newBooking.title')} onPress={() => router.push('/(app)/new-booking')} />
-        <Button
-          label={t('timeBlock.title')}
-          variant="secondary"
-          onPress={() => router.push('/(app)/time-block')}
-        />
       </ScrollView>
     </SafeAreaView>
   );
