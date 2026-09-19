@@ -3,20 +3,57 @@
     "appName": "Barbro",
     "save": "Zapisz",
     "cancel": "Anuluj",
+    "back": "Wróć",
     "retry": "Spróbuj ponownie",
     "loading": "Ładowanie…"
   },
+  "auth": {
+    "subtitle": "Zaloguj się do panelu swojego salonu.",
+    "email": "Adres e-mail",
+    "password": "Hasło",
+    "signIn": "Zaloguj się",
+    "forgotPassword": "Nie pamiętam hasła",
+    "fillBoth": "Podaj adres e-mail i hasło.",
+    "invalidCredentials": "Nieprawidłowy adres e-mail lub hasło.",
+    "invitationOnly": "Konta zakłada właściciel salonu. Jeśli czekasz na zaproszenie, sprawdź skrzynkę.",
+    "resetTitle": "Reset hasła",
+    "resetDescription": "Wyślemy link do ustawienia nowego hasła.",
+    "sendResetLink": "Wyślij link",
+    "resetSent": "Jeśli konto o tym adresie istnieje, link do zmiany hasła jest już w drodze. Sprawdź także folder ze spamem.",
+    "backToLogin": "Wróć do logowania",
+    "newPasswordTitle": "Nowe hasło",
+    "newPassword": "Nowe hasło",
+    "repeatPassword": "Powtórz hasło",
+    "passwordHint": "Minimum 8 znaków.",
+    "passwordTooShort": "Hasło musi mieć co najmniej 8 znaków.",
+    "passwordsDiffer": "Hasła nie są takie same.",
+    "savePassword": "Zapisz hasło",
+    "resetFailed": "Nie udało się zmienić hasła. Spróbuj ponownie.",
+    "resetLinkExpired": "Link wygasł albo został już użyty. Poproś o nowy."
+  },
+  "today": {
+    "title": "Dziś",
+    "roleOwner": "Właściciel salonu",
+    "roleStaff": "Pracownik",
+    "noSalon": "To konto nie jest jeszcze przypisane do żadnego salonu.",
+    "salonError": "Nie udało się pobrać danych salonu.",
+    "nextStep": "Kalendarz w budowie",
+    "nextStepDescription": "Wizyty, szybkie akcje i widok tygodnia pojawią się w kolejnym etapie."
+  },
+  "account": {
+    "title": "Konto",
+    "signOut": "Wyloguj się",
+    "deleteTitle": "Usuń konto",
+    "deleteDescription": "Usunięcie konta jest nieodwracalne.",
+    "deleteConsequences": "Stracisz dostęp do aplikacji. Rezerwacje salonu zostają, ale przestają być powiązane z Twoim kontem. Jeśli jesteś jedynym właścicielem salonu, salon zostanie wyłączony.",
+    "deletePhrase": "USUŃ",
+    "deleteConfirmLabel": "Wpisz {phrase}, żeby potwierdzić",
+    "deleteButton": "Usuń konto na zawsze",
+    "deleteError": "Nie udało się usunąć konta. Spróbuj ponownie albo napisz do nas.",
+    "deletedTitle": "Konto usunięte",
+    "deletedMessage": "Twoje konto zostało usunięte."
+  },
   "setup": {
-    "title": "Fundament gotowy",
-    "subtitle": "Aplikacja uruchamia się, wygląd oparty na tokenach, klient bazy podpięty.",
-    "envHeading": "Konfiguracja",
-    "supabaseOk": "Supabase: połączenie skonfigurowane",
-    "supabaseMissing": "Supabase: brak konfiguracji (.env.local)",
-    "sentryOk": "Sentry: włączony",
-    "sentryMissing": "Sentry: wyłączony (brak DSN)",
-    "environment": "Środowisko: {environment}",
-    "connectionCheck": "Sprawdź połączenie z bazą",
-    "connectionOk": "Baza odpowiada poprawnie",
-    "connectionFailed": "Baza nie odpowiada: {message}"
+    "supabaseMissing": "Brak konfiguracji połączenia z bazą (.env.local)."
   }
 }

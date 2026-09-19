@@ -2,7 +2,9 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AuthProvider } from '@/lib/auth';
 import { queryClient } from '@/lib/query-client';
 import { initSentry } from '@/lib/sentry';
 import { AppThemeProvider, useTheme } from '@/theme';
@@ -36,12 +38,16 @@ function NavigationTheme({ children }: { children: ReactNode }) {
 
 export default function RootLayout() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AppThemeProvider>
-        <NavigationTheme>
-          <Stack screenOptions={{ headerShown: false }} />
-        </NavigationTheme>
-      </AppThemeProvider>
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AppThemeProvider>
+            <NavigationTheme>
+              <Stack screenOptions={{ headerShown: false }} />
+            </NavigationTheme>
+          </AppThemeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
