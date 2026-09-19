@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Switch, View } from 'react-native';
 
@@ -95,9 +95,9 @@ export default function AddonFormScreen() {
 
   return (
     <Screen scroll>
-      <Text variant="title">
-        {isNew ? t('addonsAdmin.newTitle') : t('addonsAdmin.editTitle')}
-      </Text>
+      <Stack.Screen
+        options={{ title: isNew ? t('addonsAdmin.newTitle') : t('addonsAdmin.editTitle') }}
+      />
 
       <Input label={t('addonsAdmin.name')} value={name} onChangeText={setName} />
       <Input

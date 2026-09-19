@@ -31,7 +31,6 @@ export default function CategoriesScreen() {
 
   return (
     <Screen scroll>
-      <Text variant="title">{t('categories.title')}</Text>
       <Text tone="secondary">{t('categories.description')}</Text>
 
       {(categories ?? []).map((category, index) => (
@@ -90,11 +89,6 @@ export default function CategoriesScreen() {
         {t('categories.deleteNote')}
       </Text>
 
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/services'))}
-      />
     </Screen>
   );
 }

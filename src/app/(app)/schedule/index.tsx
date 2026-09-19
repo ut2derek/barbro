@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useSalonStaff } from '@/features/bookings/queries';
-import { useCurrentSalon } from '@/features/salon/use-current-salon';
+import { useCurrentSalon, useMyStaffId } from '@/features/salon/use-current-salon';
 import {
   useAddSalonHours,
   useAddWorkingHours,
@@ -140,12 +140,15 @@ export default function ScheduleScreen() {
   const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: staff } = useSalonStaff(salon?.salonId);
+  const { data: myStaffId } = useMyStaffId();
 
   const [staffId, setStaffId] = useState<string | null>(null);
   const [showSalonHours, setShowSalonHours] = useState(false);
 
-  const effectiveStaffId = staffId ?? staff?.[0]?.id ?? null;
   const isOwner = salon?.role === 'owner';
+  // Pracownik prowadzi wyłącznie swój grafik — bez przełącznika, żeby nie
+  // próbował zapisać zmian, których i tak nie wolno mu wprowadzić.
+  const effectiveStaffId = isOwner ? (staffId ?? staff?.[0]?.id ?? null) : myStaffId ?? null;
 
   const { data: salonHours } = useSalonHours(salon?.salonId);
   const { data: workingHours } = useWorkingHours({
@@ -163,8 +166,6 @@ export default function ScheduleScreen() {
 
   return (
     <Screen scroll>
-      <Text variant="title">{t('schedule.title')}</Text>
-
       {isOwner ? (
         <Card>
           <Text variant="heading">{t('schedule.salonHoursTitle')}</Text>
@@ -194,7 +195,7 @@ export default function ScheduleScreen() {
           ))
         : null}
 
-      {staff && staff.length > 1 ? (
+      {isOwner && staff && staff.length > 1 ? (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
           <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
             {staff.map((member) => (
@@ -254,11 +255,6 @@ export default function ScheduleScreen() {
         onPress={() => router.push('/(app)/schedule/exceptions')}
       />
 
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
-      />
     </Screen>
   );
 }

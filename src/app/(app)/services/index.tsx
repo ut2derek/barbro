@@ -60,9 +60,7 @@ export default function ServicesScreen() {
         }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
       >
-        <Text variant="display">{t('services.title')}</Text>
-
-        {isPending ? (
+          {isPending ? (
           <Text tone="muted">{t('common.loading')}</Text>
         ) : groups.length === 0 ? (
           <Card>

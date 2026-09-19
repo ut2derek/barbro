@@ -85,7 +85,6 @@ export default function TimeBlockScreen() {
 
   return (
     <Screen scroll>
-      <Text variant="title">{t('timeBlock.title')}</Text>
       <Text tone="secondary">{t('timeBlock.description')}</Text>
 
       {staff && staff.length > 1 ? (
@@ -155,11 +154,6 @@ export default function TimeBlockScreen() {
         </View>
       ) : null}
 
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
-      />
     </Screen>
   );
 }

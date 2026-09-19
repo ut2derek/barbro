@@ -123,8 +123,6 @@ export default function NewBookingScreen() {
 
   return (
     <Screen scroll>
-      <Text variant="title">{t('newBooking.title')}</Text>
-
       {staff && staff.length > 1 ? (
         <View style={{ gap: theme.spacing.sm }}>
           <Text variant="label" tone="secondary">

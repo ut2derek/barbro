@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
 import { useEffect, useState } from 'react';
 import { Switch, View } from 'react-native';
@@ -134,7 +134,9 @@ export default function ServiceFormScreen() {
 
   return (
     <Screen scroll>
-      <Text variant="title">{isNew ? t('serviceForm.newTitle') : t('serviceForm.editTitle')}</Text>
+      <Stack.Screen
+        options={{ title: isNew ? t('serviceForm.newTitle') : t('serviceForm.editTitle') }}
+      />
 
       <Input label={t('serviceForm.name')} value={name} onChangeText={setName} />
       <Input

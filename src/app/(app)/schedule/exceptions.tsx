@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useSalonStaff } from '@/features/bookings/queries';
-import { useCurrentSalon } from '@/features/salon/use-current-salon';
+import { useCurrentSalon, useMyStaffId } from '@/features/salon/use-current-salon';
 import {
   useAddScheduleException,
   useRemoveScheduleException,
@@ -29,6 +29,7 @@ export default function ExceptionsScreen() {
   const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: staff } = useSalonStaff(salon?.salonId);
+  const { data: myStaffId } = useMyStaffId();
   const { data: exceptions } = useScheduleExceptions(salon?.salonId);
 
   const addException = useAddScheduleException();
@@ -46,8 +47,8 @@ export default function ExceptionsScreen() {
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const effectiveStaffId = staffId ?? staff?.[0]?.id ?? null;
   const isOwner = salon?.role === 'owner';
+  const effectiveStaffId = isOwner ? (staffId ?? staff?.[0]?.id ?? null) : myStaffId ?? null;
 
   async function save() {
     setError(null);
@@ -80,7 +81,6 @@ export default function ExceptionsScreen() {
 
   return (
     <Screen scroll>
-      <Text variant="title">{t('exceptions.title')}</Text>
       <Text tone="secondary">{t('exceptions.description')}</Text>
 
       {(exceptions ?? []).length > 0 ? (
@@ -136,7 +136,7 @@ export default function ExceptionsScreen() {
           </View>
         ) : null}
 
-        {scope === 'staff' && staff && staff.length > 1 ? (
+        {isOwner && scope === 'staff' && staff && staff.length > 1 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
             <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
               {staff.map((member) => (
@@ -206,11 +206,6 @@ export default function ExceptionsScreen() {
         <Button label={t('exceptions.add')} loading={addException.isPending} onPress={() => void save()} />
       </Card>
 
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/schedule'))}
-      />
     </Screen>
   );
 }

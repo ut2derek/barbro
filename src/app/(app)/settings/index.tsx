@@ -141,15 +141,12 @@ export default function SettingsScreen() {
       <Screen>
         <Text variant="title">{t('settings.title')}</Text>
         <Text tone="secondary">{t('settings.ownerOnly')}</Text>
-        <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
       </Screen>
     );
   }
 
   return (
     <Screen scroll>
-      <Text variant="title">{t('settings.title')}</Text>
-
       <Card>
         <Text variant="heading">{t('settings.salonSection')}</Text>
         <Input label={t('settings.name')} value={form.name} onChangeText={(name) => setForm({ ...form, name })} />
@@ -262,11 +259,6 @@ export default function SettingsScreen() {
 
       <Button label={t('common.save')} loading={update.isPending} onPress={() => void save()} />
 
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
-      />
     </Screen>
   );
 }

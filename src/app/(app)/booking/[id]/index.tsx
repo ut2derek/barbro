@@ -181,11 +181,6 @@ export default function BookingDetailScreen() {
         )
       ) : null}
 
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
-      />
     </Screen>
   );
 }

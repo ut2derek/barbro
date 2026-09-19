@@ -43,9 +43,7 @@ export default function AdminScreen() {
   if (!isAdmin) {
     return (
       <Screen>
-        <Text variant="title">{t('admin.title')}</Text>
-        <Text tone="secondary">{t('admin.noAccess')}</Text>
-        <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
+          <Text tone="secondary">{t('admin.noAccess')}</Text>
       </Screen>
     );
   }
@@ -174,11 +172,6 @@ export default function AdminScreen() {
         </Card>
       ) : null}
 
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
-      />
     </Screen>
   );
 }

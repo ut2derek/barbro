@@ -5,11 +5,13 @@ import { Modal, Pressable, RefreshControl, ScrollView, StyleSheet, View } from '
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BookingCard } from '@/components/bookings/booking-card';
+import { CancelSheet } from '@/components/bookings/cancel-sheet';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { Text } from '@/components/ui/text';
 import {
   useBookingsInRange,
+  useChangeBookingStatus,
   useDayBookings,
   useDayTimeBlocks,
   useSalonStaff,
@@ -43,6 +45,8 @@ export default function CalendarScreen() {
   const { data: salon } = useCurrentSalon();
   const { data: staff } = useSalonStaff(salon?.salonId);
   const quickAction = useQuickBookingAction();
+  const changeStatus = useChangeBookingStatus();
+  const [cancelling, setCancelling] = useState<BookingListItem | null>(null);
 
   const [mode, setMode] = useState<Mode>('day');
   const [day, setDay] = useState(() => DateTime.now().setZone(ZONE).startOf('day'));
@@ -232,6 +236,7 @@ export default function CalendarScreen() {
                   showStaff={staffId === null}
                   onPress={() => router.push(`/(app)/booking/${booking.id}`)}
                   onQuickAction={quickAction}
+                  onCancel={setCancelling}
                 />
               ))
             ) : (
@@ -291,6 +296,7 @@ export default function CalendarScreen() {
                       showStaff={staffId === null}
                       onPress={() => router.push(`/(app)/booking/${booking.id}`)}
                       onQuickAction={quickAction}
+                  onCancel={setCancelling}
                     />
                   ))}
                 </View>
@@ -388,6 +394,7 @@ export default function CalendarScreen() {
                   showStaff={staffId === null}
                   onPress={() => router.push(`/(app)/booking/${booking.id}`)}
                   onQuickAction={quickAction}
+                  onCancel={setCancelling}
                 />
               ))
             ) : (
@@ -399,6 +406,23 @@ export default function CalendarScreen() {
           </>
         )}
       </ScrollView>
+
+      <CancelSheet
+        booking={cancelling}
+        zone={ZONE}
+        busy={changeStatus.isPending}
+        onClose={() => setCancelling(null)}
+        // Identyfikator bierzemy z arkusza, a nie z wykrzyknikiem ze stanu —
+        // odczyt pola na wartości, która bywa pusta, wywracał renderowanie.
+        onConfirm={async (comment, bookingId) => {
+          await changeStatus.mutateAsync({
+            bookingId,
+            status: 'cancelled_by_salon',
+            comment,
+          });
+          setCancelling(null);
+        }}
+      />
 
       {/* Wybór miesiąca i roku */}
       <Modal

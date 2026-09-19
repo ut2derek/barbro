@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Switch, View } from 'react-native';
 
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
+import { Stars } from '@/components/ui/stars';
 import { Text } from '@/components/ui/text';
 import { useClient, useClientBookings, useUpdateClient } from '@/features/clients/queries';
 import { statusLabel, statusTone } from '@/features/bookings/status';
@@ -47,8 +48,10 @@ export default function ClientScreen() {
 
   return (
     <Screen scroll>
+      {/* W nagłówku imię klienta — „Klient” niczego nie mówi. */}
+      <Stack.Screen options={{ title: client.name }} />
+
       <View style={{ gap: theme.spacing.xs }}>
-        <Text variant="title">{client.name}</Text>
         <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
           {client.blocked ? <Badge label={t('clients.blocked')} tone="danger" /> : null}
           {client.noShowCount > 0 ? (
@@ -89,6 +92,25 @@ export default function ClientScreen() {
           <Text variant="title">{formatPrice(spent)}</Text>
         </Card>
       </View>
+
+      <Card>
+        <Text variant="heading">{t('clients.rating')}</Text>
+        <Text variant="small" tone="muted">
+          {t('clients.ratingHint')}
+        </Text>
+        <Stars
+          value={client.internalRating}
+          size="large"
+          count={null}
+          onChange={(value) =>
+            updateClient.mutate({
+              clientId: id,
+              // Ta sama gwiazdka drugi raz kasuje ocenę.
+              internalRating: client.internalRating === value ? null : value,
+            })
+          }
+        />
+      </Card>
 
       <Card>
         <Text variant="heading">{t('clients.note')}</Text>
@@ -163,11 +185,6 @@ export default function ClientScreen() {
         ))
       )}
 
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)/clients'))}
-      />
     </Screen>
   );
 }

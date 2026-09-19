@@ -1,12 +1,15 @@
 import { useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
+import { useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BookingCard } from '@/components/bookings/booking-card';
+import { CancelSheet } from '@/components/bookings/cancel-sheet';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
-import { useDayBookings } from '@/features/bookings/queries';
+import { useChangeBookingStatus, useDayBookings, type BookingListItem } from '@/features/bookings/queries';
 import { useQuickBookingAction } from '@/features/bookings/use-quick-action';
 import { ACTIVE_STATUSES } from '@/features/bookings/status';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
@@ -20,6 +23,9 @@ export default function TodayScreen() {
   const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const quickAction = useQuickBookingAction();
+  // Odwoływana wizyta — arkusz z powodem otwiera się nad listą.
+  const [cancelling, setCancelling] = useState<BookingListItem | null>(null);
+  const changeStatus = useChangeBookingStatus();
   const zone = 'Europe/Warsaw';
   const today = DateTime.now().setZone(zone);
 
@@ -83,6 +89,7 @@ export default function TodayScreen() {
               showStaff
               onPress={() => router.push(`/(app)/booking/${booking.id}`)}
               onQuickAction={quickAction}
+              onCancel={setCancelling}
             />
           ))
         ) : (
@@ -93,6 +100,23 @@ export default function TodayScreen() {
         )}
 
       </ScrollView>
+
+      <CancelSheet
+        booking={cancelling}
+        zone={zone}
+        busy={changeStatus.isPending}
+        onClose={() => setCancelling(null)}
+        // Identyfikator bierzemy z arkusza, a nie z wykrzyknikiem ze stanu —
+        // odczyt pola na wartości, która bywa pusta, wywracał renderowanie.
+        onConfirm={async (comment, bookingId) => {
+          await changeStatus.mutateAsync({
+            bookingId,
+            status: 'cancelled_by_salon',
+            comment,
+          });
+          setCancelling(null);
+        }}
+      />
     </SafeAreaView>
   );
 }

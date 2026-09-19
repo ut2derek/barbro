@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 
@@ -123,7 +123,9 @@ export default function TeamMemberScreen() {
 
   return (
     <Screen scroll>
-      <Text variant="title">{isNew ? t('teamForm.newTitle') : t('teamForm.editTitle')}</Text>
+      <Stack.Screen
+        options={{ title: isNew ? t('teamForm.newTitle') : t('teamForm.editTitle') }}
+      />
 
       <Input label={t('teamForm.name')} value={displayName} onChangeText={setDisplayName} />
       <Input
@@ -252,11 +254,6 @@ export default function TeamMemberScreen() {
         </>
       ) : null}
 
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/team'))}
-      />
     </Screen>
   );
 }

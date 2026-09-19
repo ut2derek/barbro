@@ -34,6 +34,12 @@ const ENTRIES: Entry[] = [
     href: '/(app)/schedule',
   },
   {
+    key: 'reviews',
+    label: 'more.reviews',
+    description: 'more.reviewsDescription',
+    href: '/(app)/reviews',
+  },
+  {
     key: 'team',
     label: 'more.team',
     description: 'more.teamDescription',

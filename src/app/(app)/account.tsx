@@ -48,10 +48,7 @@ export default function AccountScreen() {
 
   return (
     <Screen scroll>
-      <View style={{ gap: theme.spacing.xs }}>
-        <Text variant="title">{t('account.title')}</Text>
-        <Text tone="secondary">{user?.email}</Text>
-      </View>
+      <Text tone="secondary">{user?.email}</Text>
 
       <Button
         label={t('schedule.title')}
@@ -106,12 +103,6 @@ export default function AccountScreen() {
         />
       </Card>
 
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        // Wejście z linku albo powiadomienia nie ma historii, do której można wrócić.
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
-      />
     </Screen>
   );
 }
