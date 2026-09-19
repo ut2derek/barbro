@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
+import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import {
   useDeleteService,
   useSaveService,
@@ -17,10 +18,9 @@ import {
   useServices,
 } from '@/features/services/queries';
 import { t } from '@/i18n';
+import { useRecordChange } from '@/lib/use-synced-form';
 import { formatPrice } from '@/lib/format';
 import { useTheme } from '@/theme';
-
-const ZONE = 'Europe/Warsaw';
 
 /** Kwoty wpisujemy w złotych, w bazie żyją w groszach. */
 function toGrosz(value: string): number | null {
@@ -34,6 +34,7 @@ function fromGrosz(grosz: number): string {
 }
 
 export default function ServiceFormScreen() {
+  const zone = useSalonTimezone();
   const theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -60,7 +61,9 @@ export default function ServiceFormScreen() {
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  useEffect(() => {
+  // Wypełnienie pól danymi usługi — raz na usługę, bez kasowania zmian
+  // przy odświeżeniu cennika.
+  useRecordChange(existing?.id, () => {
     if (!existing) return;
     setName(existing.name);
     setDescription(existing.description ?? '');
@@ -75,7 +78,7 @@ export default function ServiceFormScreen() {
       const ends = existing.promoEndsAt ? DateTime.fromISO(existing.promoEndsAt) : null;
       setPromoDays(ends ? String(Math.max(1, Math.ceil(ends.diffNow('days').days))) : '7');
     }
-  }, [existing]);
+  });
 
   async function save() {
     setError(null);
@@ -103,7 +106,7 @@ export default function ServiceFormScreen() {
       if (promoPriceGrosz >= priceGrosz) return setError(t('serviceForm.promoNotLower'));
       if (!Number.isInteger(days) || days < 1) return setError(t('serviceForm.badPromoDays'));
 
-      const now = DateTime.now().setZone(ZONE);
+      const now = DateTime.now().setZone(zone);
       // Promocja zaczyna się teraz, żeby historia cen miała sensowny punkt odniesienia.
       promoStartsAt = existing?.promoActive
         ? (existing.promoEndsAt ? now.toISO() : now.toISO())

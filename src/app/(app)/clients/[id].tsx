@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Linking, Switch, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
@@ -11,14 +11,15 @@ import { Text } from '@/components/ui/text';
 import { useClient, useClientBookings, useUpdateClient } from '@/features/clients/queries';
 import { statusLabel, statusTone } from '@/features/bookings/status';
 import type { BookingStatus } from '@/features/bookings/queries';
+import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import { t } from '@/i18n';
+import { useSyncedForm } from '@/lib/use-synced-form';
 import { formatFullDate, formatPrice, formatTimeRange } from '@/lib/format';
 import { useTheme } from '@/theme';
 
-const ZONE = 'Europe/Warsaw';
-
 /** Karta klienta: kontakt, notatka salonu i pełna historia wizyt. */
 export default function ClientScreen() {
+  const zone = useSalonTimezone();
   const theme = useTheme();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,12 +28,10 @@ export default function ClientScreen() {
   const { data: bookings } = useClientBookings(id);
   const updateClient = useUpdateClient();
 
-  const [note, setNote] = useState('');
+  // Notatka wypełnia się danymi klienta, ale odświeżenie listy nie kasuje
+  // tego, co barber właśnie pisze.
+  const [note, setNote] = useSyncedForm(client, client?.id, (c) => c.internalNote ?? '', '');
   const [noteSaved, setNoteSaved] = useState(false);
-
-  useEffect(() => {
-    if (client) setNote(client.internalNote ?? '');
-  }, [client]);
 
   if (isPending || !client) {
     return (
@@ -146,14 +145,14 @@ export default function ClientScreen() {
         (bookings ?? []).map((booking) => (
           <Card key={booking.id}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text variant="bodyStrong">{formatFullDate(booking.startsAt, ZONE)}</Text>
+              <Text variant="bodyStrong">{formatFullDate(booking.startsAt, zone)}</Text>
               <Badge
                 label={statusLabel(booking.status as BookingStatus)}
                 tone={statusTone(booking.status as BookingStatus)}
               />
             </View>
             <Text tone="secondary" variant="small">
-              {formatTimeRange(booking.startsAt, booking.endsAt, ZONE)} · {booking.staffName}
+              {formatTimeRange(booking.startsAt, booking.endsAt, zone)} · {booking.staffName}
             </Text>
             <Text variant="small">{booking.services.join(' + ')}</Text>
             <Text variant="small" tone="secondary">

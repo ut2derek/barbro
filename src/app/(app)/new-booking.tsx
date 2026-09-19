@@ -3,6 +3,7 @@ import { DateTime } from 'luxon';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
+import { SlotPicker } from '@/components/bookings/slot-picker';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
@@ -12,12 +13,11 @@ import { Text } from '@/components/ui/text';
 import { useClientSearch, useCreateClient } from '@/features/clients/queries';
 import { useAvailableSlots, useCreateBooking, useSalonStaff } from '@/features/bookings/queries';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
+import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import { useServices } from '@/features/services/queries';
 import { t } from '@/i18n';
-import { formatDuration, formatFullDate, formatPrice, formatTime } from '@/lib/format';
+import { formatDuration, formatFullDate, formatPrice } from '@/lib/format';
 import { useTheme } from '@/theme';
-
-const ZONE = 'Europe/Warsaw';
 
 /**
  * Ręczne dopisanie wizyty — klient z ulicy albo umówiony przez telefon.
@@ -25,6 +25,7 @@ const ZONE = 'Europe/Warsaw';
  * bo w salonie zdarza się kogoś wcisnąć.
  */
 export default function NewBookingScreen() {
+  const zone = useSalonTimezone();
   const theme = useTheme();
   const router = useRouter();
   const { data: salon } = useCurrentSalon();
@@ -35,7 +36,7 @@ export default function NewBookingScreen() {
   const [clientQuery, setClientQuery] = useState('');
   const [newClient, setNewClient] = useState({ firstName: '', phone: '', email: '' });
   const [creatingClient, setCreatingClient] = useState(false);
-  const [day, setDay] = useState(() => DateTime.now().setZone(ZONE).startOf('day'));
+  const [day, setDay] = useState(() => DateTime.now().setZone(zone).startOf('day'));
   const [customTime, setCustomTime] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -48,7 +49,7 @@ export default function NewBookingScreen() {
     salonId: salon?.salonId,
     serviceIds,
     day,
-    zone: ZONE,
+    zone: zone,
     staffId: effectiveStaffId,
     enabled: serviceIds.length > 0,
   });
@@ -130,7 +131,7 @@ export default function NewBookingScreen() {
           <Text variant="label" tone="secondary">
             {t('newBooking.staff')}
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
             <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
               {staff.map((member) => (
                 <Chip
@@ -280,39 +281,18 @@ export default function NewBookingScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
             <Button label="‹" variant="secondary" onPress={() => setDay(day.minus({ days: 1 }))} />
             <Text variant="heading" style={{ flex: 1, textAlign: 'center' }}>
-              {formatFullDate(day.toISO()!, ZONE)}
+              {formatFullDate(day.toISO()!, zone)}
             </Text>
             <Button label="›" variant="secondary" onPress={() => setDay(day.plus({ days: 1 }))} />
           </View>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm }}>
-            {(slots ?? []).map((slot) => (
-              <Pressable
-                key={slot.slot_start}
-                accessibilityRole="button"
-                onPress={() => void save(slot.slot_start)}
-                style={{
-                  minHeight: theme.minTouchTarget,
-                  minWidth: 88,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  paddingHorizontal: theme.spacing.lg,
-                  borderRadius: theme.radius.md,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.colors.surface,
-                }}
-              >
-                <Text variant="bodyStrong">{formatTime(slot.slot_start, ZONE)}</Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {(slots ?? []).length === 0 ? (
-            <Text tone="muted" variant="small">
-              {t('newBooking.noSlots')}
-            </Text>
-          ) : null}
+          <SlotPicker
+            slots={slots}
+            zone={zone}
+            onSelect={(slotStart) => void save(slotStart)}
+            emptyTitle={t('booking.noSlotsTitle')}
+            emptyDescription={t('newBooking.noSlots')}
+          />
 
           <Card>
             <Text variant="label" tone="secondary">
@@ -342,7 +322,7 @@ export default function NewBookingScreen() {
       <Button
         label={t('common.cancel')}
         variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)'))}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
       />
     </Screen>
   );

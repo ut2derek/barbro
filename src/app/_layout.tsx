@@ -3,6 +3,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
 
+import { UndoProvider } from '@/components/ui/undo-toast';
 import { AuthProvider } from '@/lib/auth';
 import { queryClient } from '@/lib/query-client';
 import { initSentry } from '@/lib/sentry';
@@ -41,7 +42,9 @@ export default function RootLayout() {
       <AuthProvider>
         <AppThemeProvider>
           <NavigationTheme>
-            <Stack screenOptions={{ headerShown: false }} />
+            <UndoProvider>
+              <Stack screenOptions={{ headerShown: false }} />
+            </UndoProvider>
           </NavigationTheme>
         </AppThemeProvider>
       </AuthProvider>

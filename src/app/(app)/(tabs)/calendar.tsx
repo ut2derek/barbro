@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
 import { useMemo, useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BookingCard } from '@/components/bookings/booking-card';
@@ -48,7 +48,9 @@ export default function CalendarScreen() {
 
   const [cancelling, setCancelling] = useState<BookingListItem | null>(null);
   const [mode, setMode] = useState<CalendarMode>('day');
-  const [day, setDay] = useState(() => DateTime.now().setZone(zone).startOf('day'));
+  const [day, setDay] = useState<DateTime<boolean>>(() =>
+    DateTime.now().setZone(zone).startOf('day'),
+  );
   const [staffId, setStaffId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
 

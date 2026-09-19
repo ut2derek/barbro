@@ -36,7 +36,7 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <Screen scroll>
+    <Screen scroll edges={['top', 'bottom']}>
       <View style={{ gap: theme.spacing.lg, paddingTop: theme.spacing.xl }}>
         <Text variant="title">{t('auth.resetTitle')}</Text>
 

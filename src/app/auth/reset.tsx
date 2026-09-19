@@ -39,7 +39,7 @@ export default function ResetPasswordScreen() {
     setBusy(true);
     try {
       await updatePassword(password);
-      router.replace('/(app)');
+      router.replace('/');
     } catch {
       setError(t('auth.resetFailed'));
     } finally {
@@ -48,7 +48,7 @@ export default function ResetPasswordScreen() {
   }
 
   return (
-    <Screen scroll>
+    <Screen scroll edges={['top', 'bottom']}>
       <View style={{ gap: theme.spacing.lg, paddingTop: theme.spacing.xl }}>
         <Text variant="title">{t('auth.newPasswordTitle')}</Text>
 

@@ -4,7 +4,7 @@ import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeabl
 import { Badge } from '@/components/ui/badge';
 import { Text } from '@/components/ui/text';
 import type { BookingListItem, BookingStatus } from '@/features/bookings/queries';
-import { statusLabel, statusTone } from '@/features/bookings/status';
+import { ACTIVE_STATUSES, statusLabel, statusTone } from '@/features/bookings/status';
 import { t } from '@/i18n';
 import { formatPrice, formatTimeRange } from '@/lib/format';
 import { useTheme } from '@/theme';
@@ -38,9 +38,18 @@ type Props = {
   showStaff?: boolean;
   onPress: () => void;
   onQuickAction?: (booking: BookingListItem, status: BookingStatus, label: string) => void;
+  /** Otwiera arkusz odwołania. Bez tego kafelek nie pokazuje przycisku. */
+  onCancel?: (booking: BookingListItem) => void;
 };
 
-export function BookingCard({ booking, zone, showStaff = false, onPress, onQuickAction }: Props) {
+export function BookingCard({
+  booking,
+  zone,
+  showStaff = false,
+  onPress,
+  onQuickAction,
+  onCancel,
+}: Props) {
   const theme = useTheme();
   const cancelled = booking.status.startsWith('cancelled') || booking.status === 'no_show';
   const actions = onQuickAction ? quickActions(booking.status) : {};
@@ -68,20 +77,26 @@ export function BookingCard({ booking, zone, showStaff = false, onPress, onQuick
   }
 
   const card = (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${formatTimeRange(booking.startsAt, booking.endsAt, zone)} ${booking.clientName}`}
-      onPress={onPress}
-      style={({ pressed }) => ({
+    <View
+      style={{
         backgroundColor: theme.colors.surface,
         borderRadius: theme.radius.lg,
         borderWidth: 1,
         borderColor: theme.colors.border,
         padding: theme.spacing.lg,
         gap: theme.spacing.xs,
-        opacity: pressed ? 0.85 : cancelled ? 0.6 : 1,
-      })}
+        opacity: cancelled ? 0.6 : 1,
+      }}
     >
+      {/* Klikalna jest sama treść wizyty. Przyciski akcji leżą poniżej, poza
+          nią — przycisk w przycisku to nieprawidłowy układ, którego czytnik
+          ekranu (i przeglądarka) nie potrafią poprawnie obsłużyć. */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${formatTimeRange(booking.startsAt, booking.endsAt, zone)} ${booking.clientName}`}
+        onPress={onPress}
+        style={({ pressed }) => ({ gap: theme.spacing.xs, opacity: pressed ? 0.85 : 1 })}
+      >
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
         <Text variant="heading">{formatTimeRange(booking.startsAt, booking.endsAt, zone)}</Text>
         <Badge label={statusLabel(booking.status)} tone={statusTone(booking.status)} />
@@ -104,6 +119,8 @@ export function BookingCard({ booking, zone, showStaff = false, onPress, onQuick
           {formatPrice(booking.totalPriceGrosz)}
         </Text>
       </View>
+
+      </Pressable>
 
       {/* Te same akcje co gest — dla myszy, czytnika ekranu i tych, którzy
           nie wiedzą, że kafelek da się przesunąć. */}
@@ -148,7 +165,25 @@ export function BookingCard({ booking, zone, showStaff = false, onPress, onQuick
           ) : null}
         </View>
       ) : null}
-    </Pressable>
+
+      {onCancel && ACTIVE_STATUSES.includes(booking.status) ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => onCancel(booking)}
+          style={{
+            minHeight: theme.minTouchTarget,
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: theme.radius.md,
+            marginTop: theme.spacing.xs,
+          }}
+        >
+          <Text variant="label" tone="danger">
+            {t('booking.cancelBooking')}
+          </Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 
   if (!actions.right && !actions.left) return card;

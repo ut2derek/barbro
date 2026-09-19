@@ -257,7 +257,7 @@ export default function ScheduleScreen() {
       <Button
         label={t('common.back')}
         variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)'))}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
       />
     </Screen>
   );

@@ -10,17 +10,17 @@ import { Stars } from '@/components/ui/stars';
 import { Text } from '@/components/ui/text';
 import { useReplyToReview, useSalonRating, useSalonReviews } from '@/features/reviews/queries';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
+import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import { t } from '@/i18n';
 import { formatFullDate } from '@/lib/format';
 import { useTheme } from '@/theme';
-
-const ZONE = 'Europe/Warsaw';
 
 /**
  * Opinie klientów. Salon może odpowiedzieć, ale nie może usunąć ani ukryć —
  * dlatego w ogóle warto je czytać.
  */
 export default function ReviewsScreen() {
+  const zone = useSalonTimezone();
   const theme = useTheme();
   const router = useRouter();
   const { data: salon } = useCurrentSalon();
@@ -61,7 +61,7 @@ export default function ReviewsScreen() {
             >
               <Stars value={review.rating} count={null} />
               <Text variant="small" tone="muted">
-                {formatFullDate(review.createdAt, ZONE)}
+                {formatFullDate(review.createdAt, zone)}
               </Text>
             </View>
 

@@ -21,6 +21,9 @@ export function Chip({
       accessibilityState={{ selected }}
       onPress={onPress}
       style={{
+        // Bez tego chip w poziomym pasku rozciąga się na całą jego wysokość,
+        // a zaokrąglenie „pill” zamienia go wtedy w wielkie koło.
+        alignSelf: 'flex-start',
         minHeight: theme.minTouchTarget,
         justifyContent: 'center',
         paddingHorizontal: theme.spacing.lg,

@@ -14,7 +14,11 @@ type Props = {
   zone: string;
   busy?: boolean;
   onClose: () => void;
-  onConfirm: (comment: string) => void;
+  /**
+   * Identyfikator podajemy razem z powodem, bo wizyta do odwołania jest
+   * trzymana w stanie arkusza — ekran nie musi jej stamtąd wyłuskiwać.
+   */
+  onConfirm: (comment: string, bookingId: string) => void;
 };
 
 /**
@@ -74,7 +78,7 @@ export function CancelSheet({ booking, zone, busy = false, onClose, onConfirm }:
             variant="danger"
             disabled={comment.trim().length < 3}
             loading={busy}
-            onPress={() => onConfirm(comment.trim())}
+            onPress={() => onConfirm(comment.trim(), booking.id)}
           />
 
           <Button label={t('booking.keepBooking')} variant="secondary" onPress={onClose} />

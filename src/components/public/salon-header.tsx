@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { View } from 'react-native';
 
+import { Stars } from '@/components/ui/stars';
 import { Text } from '@/components/ui/text';
 import { useTheme } from '@/theme';
 
@@ -23,6 +24,9 @@ type Props = {
   logoUrl: string | null;
   coverUrl: string | null;
   brandColor: string | null;
+  /** Średnia ocen salonu; puste, gdy nie ma jeszcze opinii. */
+  rating?: number | null;
+  reviewsCount?: number;
 };
 
 /**
@@ -30,7 +34,15 @@ type Props = {
  * nazwa i adres. Bez wgranych grafik pokazujemy kolor salonu i inicjały —
  * strona ma wyglądać kompletnie od pierwszego dnia, jeszcze przed zdjęciami.
  */
-export function SalonHeader({ name, address, logoUrl, coverUrl, brandColor }: Props) {
+export function SalonHeader({
+  name,
+  address,
+  logoUrl,
+  coverUrl,
+  brandColor,
+  rating = null,
+  reviewsCount = 0,
+}: Props) {
   const theme = useTheme();
   const accent = brandColor ?? theme.colors.accentMuted;
 
@@ -92,6 +104,7 @@ export function SalonHeader({ name, address, logoUrl, coverUrl, brandColor }: Pr
             {address}
           </Text>
         ) : null}
+        {reviewsCount > 0 ? <Stars value={rating} count={reviewsCount} /> : null}
       </View>
     </View>
   );

@@ -35,7 +35,7 @@ export default function ClientBookingScreen() {
 
   if (isPending) {
     return (
-      <Screen>
+      <Screen edges={['top', 'bottom']}>
         <Text tone="muted">{t('common.loading')}</Text>
       </Screen>
     );
@@ -43,7 +43,7 @@ export default function ClientBookingScreen() {
 
   if (error || !data) {
     return (
-      <Screen>
+      <Screen edges={['top', 'bottom']}>
         <Text variant="title">{t('clientBooking.invalidTitle')}</Text>
         <Text tone="secondary">{t('clientBooking.invalidDescription')}</Text>
       </Screen>
@@ -71,7 +71,7 @@ export default function ClientBookingScreen() {
   }
 
   return (
-    <Screen scroll>
+    <Screen scroll edges={['top', 'bottom']}>
       <View style={{ gap: theme.spacing.xxs }}>
         <Text variant="display">{booking.salonName}</Text>
         <Text tone="secondary">

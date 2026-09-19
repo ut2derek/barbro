@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
   useToggleStaffService,
 } from '@/features/team/queries';
 import { t } from '@/i18n';
+import { useRecordChange } from '@/lib/use-synced-form';
 import { formatPrice } from '@/lib/format';
 import { useTheme } from '@/theme';
 
@@ -51,14 +52,16 @@ export default function TeamMemberScreen() {
   const [error, setError] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, { price: string; duration: string }>>({});
 
-  useEffect(() => {
+  // Dane pracownika wpisujemy w pola raz, przy wejściu na jego kartę.
+  useRecordChange(existing?.id, () => {
     if (!existing) return;
     setDisplayName(existing.displayName);
     setBio(existing.bio ?? '');
     setActive(existing.active);
-  }, [existing]);
+  });
 
-  useEffect(() => {
+  // Odstępstwa cenowe przeliczamy, gdy zmieni się zestaw przypisanych usług.
+  useRecordChange(assignments && existing ? `${existing.id}:${assignments.length}` : undefined, () => {
     if (!assignments) return;
     setOverrides(
       Object.fromEntries(
@@ -77,7 +80,7 @@ export default function TeamMemberScreen() {
         ]),
       ),
     );
-  }, [assignments]);
+  });
 
   async function save() {
     setError(null);

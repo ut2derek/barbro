@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Text } from '@/components/ui/text';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
 import { useSalonSettings, useUpdateSalonSettings } from '@/features/settings/queries';
 import { t } from '@/i18n';
+import { useSyncedForm } from '@/lib/use-synced-form';
 import { useTheme } from '@/theme';
 
 const SLOT_STEPS = [5, 10, 15, 20, 30, 60];
@@ -49,44 +50,48 @@ export default function SettingsScreen() {
   const { data: settings } = useSalonSettings(salon?.salonId);
   const update = useUpdateSalonSettings();
 
-  const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    addressLine: '',
-    postalCode: '',
-    city: '',
-    holdMinutes: '20',
-    minLeadMinutes: '120',
-    bookingHorizonDays: '60',
-    clientCancelLeadHours: '12',
-    cancellationPolicyText: '',
-  });
-  const [slotStep, setSlotStep] = useState(15);
-  const [autoAccept, setAutoAccept] = useState(false);
-  const [onlineBooking, setOnlineBooking] = useState(true);
+  // Cały ekran to jeden formularz — ustawienia zapisujemy razem, więc i stan
+  // trzymamy razem. Wypełnia się danymi salonu, ale bez kasowania zmian,
+  // które barber właśnie wprowadza.
+  const [form, setForm] = useSyncedForm(
+    settings,
+    settings?.id,
+    (s) => ({
+      name: s.name,
+      phone: s.phone ?? '',
+      email: s.email ?? '',
+      addressLine: s.addressLine ?? '',
+      postalCode: s.postalCode ?? '',
+      city: s.city ?? '',
+      holdMinutes: String(s.holdMinutes),
+      minLeadMinutes: String(s.minLeadMinutes),
+      bookingHorizonDays: String(s.bookingHorizonDays),
+      clientCancelLeadHours: String(s.clientCancelLeadHours),
+      cancellationPolicyText: s.cancellationPolicyText ?? '',
+      slotStep: s.slotStepMinutes,
+      autoAccept: s.autoAccept,
+      onlineBooking: s.onlineBookingEnabled,
+    }),
+    {
+      name: '',
+      phone: '',
+      email: '',
+      addressLine: '',
+      postalCode: '',
+      city: '',
+      holdMinutes: '20',
+      minLeadMinutes: '120',
+      bookingHorizonDays: '60',
+      clientCancelLeadHours: '12',
+      cancellationPolicyText: '',
+      slotStep: 15,
+      autoAccept: false,
+      onlineBooking: true,
+    },
+  );
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    if (!settings) return;
-    setForm({
-      name: settings.name,
-      phone: settings.phone ?? '',
-      email: settings.email ?? '',
-      addressLine: settings.addressLine ?? '',
-      postalCode: settings.postalCode ?? '',
-      city: settings.city ?? '',
-      holdMinutes: String(settings.holdMinutes),
-      minLeadMinutes: String(settings.minLeadMinutes),
-      bookingHorizonDays: String(settings.bookingHorizonDays),
-      clientCancelLeadHours: String(settings.clientCancelLeadHours),
-      cancellationPolicyText: settings.cancellationPolicyText ?? '',
-    });
-    setSlotStep(settings.slotStepMinutes);
-    setAutoAccept(settings.autoAccept);
-    setOnlineBooking(settings.onlineBookingEnabled);
-  }, [settings]);
 
   async function save() {
     setError(null);
@@ -124,9 +129,9 @@ export default function SettingsScreen() {
           postalCode: form.postalCode || null,
           city: form.city || null,
           cancellationPolicyText: form.cancellationPolicyText || null,
-          slotStepMinutes: slotStep,
-          autoAccept,
-          onlineBookingEnabled: onlineBooking,
+          slotStepMinutes: form.slotStep,
+          autoAccept: form.autoAccept,
+          onlineBookingEnabled: form.onlineBooking,
           ...numbers,
         },
       });
@@ -193,11 +198,17 @@ export default function SettingsScreen() {
         <Text variant="heading">{t('settings.bookingSection')}</Text>
 
         <Row label={t('settings.onlineBooking')} hint={t('settings.onlineBookingHint')}>
-          <Switch value={onlineBooking} onValueChange={setOnlineBooking} />
+          <Switch
+            value={form.onlineBooking}
+            onValueChange={(value) => setForm((f) => ({ ...f, onlineBooking: value }))}
+          />
         </Row>
 
         <Row label={t('settings.autoAccept')} hint={t('settings.autoAcceptHint')}>
-          <Switch value={autoAccept} onValueChange={setAutoAccept} />
+          <Switch
+            value={form.autoAccept}
+            onValueChange={(value) => setForm((f) => ({ ...f, autoAccept: value }))}
+          />
         </Row>
 
         <View style={{ gap: theme.spacing.sm }}>
@@ -209,8 +220,8 @@ export default function SettingsScreen() {
               <Chip
                 key={step}
                 label={`${step} min`}
-                selected={slotStep === step}
-                onPress={() => setSlotStep(step)}
+                selected={form.slotStep === step}
+                onPress={() => setForm((f) => ({ ...f, slotStep: step }))}
               />
             ))}
           </View>
@@ -265,7 +276,7 @@ export default function SettingsScreen() {
       <Button
         label={t('common.back')}
         variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)'))}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
       />
     </Screen>
   );

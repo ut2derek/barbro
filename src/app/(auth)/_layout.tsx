@@ -8,7 +8,7 @@ export default function AuthLayout() {
 
   if (session === undefined) return <Loading />;
   // Zalogowany nie ma czego szukać na ekranie logowania.
-  if (session) return <Redirect href="/(app)" />;
+  if (session) return <Redirect href="/" />;
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }
