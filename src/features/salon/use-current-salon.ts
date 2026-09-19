@@ -21,9 +21,12 @@ export function useCurrentSalon() {
     queryKey: ['current-salon', user?.id],
     enabled: Boolean(user),
     queryFn: async (): Promise<Membership | null> => {
+      // Pracownik widzi skład całego salonu, więc bez tego warunku zapytanie
+      // potrafiło zwrócić wiersz właściciela i nadać mu jego rolę w interfejsie.
       const { data, error } = await getSupabase()
         .from('salon_members')
         .select('role, salons (id, name, brand_color)')
+        .eq('user_id', user!.id)
         .limit(1)
         .maybeSingle();
 
