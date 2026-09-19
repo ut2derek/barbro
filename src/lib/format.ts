@@ -38,3 +38,18 @@ export function formatDuration(minutes: number): string {
   const rest = minutes % 60;
   return rest === 0 ? `${hours} godz.` : `${hours} godz. ${rest} min`;
 }
+
+/**
+ * Polska odmiana przez liczbę: 1 wizyta, 2 wizyty, 5 wizyt.
+ * Reguła: liczebnik kończący się na 2–4 (poza 12–14) bierze formę mnogą „lekką”.
+ */
+export function plural(count: number, one: string, few: string, many: string): string {
+  const abs = Math.abs(count);
+  if (abs === 1) return one;
+
+  const lastTwo = abs % 100;
+  const last = abs % 10;
+
+  if (last >= 2 && last <= 4 && !(lastTwo >= 12 && lastTwo <= 14)) return few;
+  return many;
+}

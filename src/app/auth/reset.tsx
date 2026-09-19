@@ -39,7 +39,7 @@ export default function ResetPasswordScreen() {
     setBusy(true);
     try {
       await updatePassword(password);
-      router.replace('/(app)');
+      router.replace('/(app)/(tabs)');
     } catch {
       setError(t('auth.resetFailed'));
     } finally {

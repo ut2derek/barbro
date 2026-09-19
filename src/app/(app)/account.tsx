@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { t } from '@/i18n';
+import { useIsAppAdmin } from '@/features/admin/queries';
 import { useAuth } from '@/lib/auth';
 import { useTheme } from '@/theme';
 
@@ -19,6 +20,7 @@ export default function AccountScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { user, signOut, deleteAccount } = useAuth();
+  const { data: isAppAdmin } = useIsAppAdmin();
 
   const [confirmation, setConfirmation] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +52,28 @@ export default function AccountScreen() {
         <Text variant="title">{t('account.title')}</Text>
         <Text tone="secondary">{user?.email}</Text>
       </View>
+
+      <Button
+        label={t('schedule.title')}
+        variant="secondary"
+        onPress={() => router.push('/(app)/schedule')}
+      />
+
+      <Button
+        label={t('team.title')}
+        variant="secondary"
+        onPress={() => router.push('/(app)/team')}
+      />
+
+      <Button
+        label={t('settings.title')}
+        variant="secondary"
+        onPress={() => router.push('/(app)/settings')}
+      />
+
+      {isAppAdmin ? (
+        <Button label={t('admin.title')} variant="secondary" onPress={() => router.push('/(app)/admin')} />
+      ) : null}
 
       <Button label={t('account.signOut')} variant="secondary" onPress={() => void signOut()} />
 
@@ -86,7 +110,7 @@ export default function AccountScreen() {
         label={t('common.back')}
         variant="secondary"
         // Wejście z linku albo powiadomienia nie ma historii, do której można wrócić.
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)'))}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
       />
     </Screen>
   );

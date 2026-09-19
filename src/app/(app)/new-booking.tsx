@@ -353,7 +353,7 @@ export default function NewBookingScreen() {
       <Button
         label={t('common.cancel')}
         variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)'))}
+        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)'))}
       />
     </Screen>
   );

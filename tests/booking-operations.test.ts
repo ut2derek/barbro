@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { type Db, withRollback } from './helpers/db';
+import { CLIENTS, SALONS, SERVICES, STAFF, USERS, type Db, withRollback } from './helpers/db';
 import {
   addService,
   addStaff,
@@ -461,6 +461,62 @@ describe('przełożenie terminu', () => {
       await expect(
         db.query('select public.reschedule_booking($1, $2)', [bookingId, at(MONDAY, '14:00')]),
       ).rejects.toMatchObject({ code: 'P0009' });
+    });
+  });
+});
+
+describe('uprawnienia zalogowanego użytkownika', () => {
+  /**
+   * Testy wyżej działają z uprawnieniami administratora bazy, więc nie wyłapią
+   * braku uprawnień zwykłego konta. Te dwa przechodzą tą samą drogą co aplikacja.
+   */
+
+  it('właściciel salonu zapisuje wizytę przez funkcję', async () => {
+    await withRollback(async (db) => {
+      await db.asUser(USERS.owner);
+
+      const { rows } = await db.query(
+        `select public.create_booking($1, $2, $3, $4::uuid[], now() + interval '10 days', 'manual') as id`,
+        [SALONS.main, STAFF.marek, CLIENTS.jan, [SERVICES.haircut]],
+      );
+
+      expect(rows[0].id).toBeTruthy();
+    });
+  });
+
+  it('właściciel obcego salonu nie zapisze wizyty w cudzym salonie', async () => {
+    await withRollback(async (db) => {
+      await db.asUser(USERS.otherSalonOwner);
+
+      // Reguły dostępu ukrywają cudzy salon całkowicie, więc funkcja nie mówi
+      // „brak uprawnień”, tylko „salon nie istnieje” — nie zdradzamy nawet tego,
+      // że taki salon jest w bazie.
+      await expect(
+        db.query(
+          `select public.create_booking($1, $2, $3, $4::uuid[], now() + interval '10 days', 'manual')`,
+          [SALONS.main, STAFF.marek, CLIENTS.jan, [SERVICES.haircut]],
+        ),
+      ).rejects.toMatchObject({ code: 'P0002' });
+    });
+  });
+
+  it('pracownik dopisuje wizytę i zmienia jej status', async () => {
+    await withRollback(async (db) => {
+      await db.asUser(USERS.staff);
+
+      const { rows } = await db.query(
+        `select public.create_booking($1, $2, $3, $4::uuid[], now() + interval '11 days', 'manual') as id`,
+        [SALONS.main, STAFF.tomek, CLIENTS.jan, [SERVICES.haircut]],
+      );
+
+      await db.query('select public.change_booking_status($1, $2, $3)', [
+        rows[0].id,
+        'cancelled_by_salon',
+        'Klient przełożył telefonicznie',
+      ]);
+
+      const check = await db.query('select status from public.bookings where id = $1', [rows[0].id]);
+      expect(check.rows[0].status).toBe('cancelled_by_salon');
     });
   });
 });
