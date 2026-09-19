@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -21,7 +20,6 @@ import { useTheme } from '@/theme';
 /** Panel właściciela produktu: zakładanie salonów i podgląd ruchu. */
 export default function AdminScreen() {
   const theme = useTheme();
-  const router = useRouter();
   const { data: isAdmin, isPending: checking } = useIsAppAdmin();
   const { data: salons } = useSalonOverview(isAdmin === true);
 

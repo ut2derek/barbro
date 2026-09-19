@@ -120,7 +120,8 @@
     "noSlotsDescription": "Tego dnia nie ma miejsca na tę wizytę. Sprawdź inny dzień.",
     "quickActionDone": "{action} — gotowe",
     "keepBooking": "Zostaw wizytę",
-    "screenTitle": "Wizyta"
+    "screenTitle": "Wizyta",
+    "pickSlot": "Wybierz godzinę {{time}}"
   },
   "newBooking": {
     "title": "Nowa wizyta",

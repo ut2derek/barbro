@@ -38,12 +38,24 @@ type Props = {
   showStaff?: boolean;
   onPress: () => void;
   onQuickAction?: (booking: BookingListItem, status: BookingStatus, label: string) => void;
+  /** Odwołanie zawsze wymaga powodu, więc otwiera osobne okno zamiast działać od razu. */
+  onCancel?: (booking: BookingListItem) => void;
 };
 
-export function BookingCard({ booking, zone, showStaff = false, onPress, onQuickAction }: Props) {
+export function BookingCard({
+  booking,
+  zone,
+  showStaff = false,
+  onPress,
+  onQuickAction,
+  onCancel,
+}: Props) {
   const theme = useTheme();
   const cancelled = booking.status.startsWith('cancelled') || booking.status === 'no_show';
   const actions = onQuickAction ? quickActions(booking.status) : {};
+  const canCancel =
+    Boolean(onCancel) &&
+    ['pending_confirmation', 'pending_approval', 'confirmed'].includes(booking.status);
 
   function ActionPanel({ action }: { action: QuickAction }) {
     return (
@@ -113,7 +125,7 @@ export function BookingCard({ booking, zone, showStaff = false, onPress, onQuick
 
       {/* Te same akcje co gest — dla myszy, czytnika ekranu i tych, którzy
           nie wiedzą, że kafelek da się przesunąć. */}
-      {actions.right || actions.left ? (
+      {actions.right || actions.left || canCancel ? (
         <View style={{ flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.xs }}>
           {actions.right ? (
             <Pressable
@@ -149,6 +161,26 @@ export function BookingCard({ booking, zone, showStaff = false, onPress, onQuick
             >
               <Text variant="label" tone="danger">
                 {actions.left.label}
+              </Text>
+            </Pressable>
+          ) : null}
+
+          {canCancel ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => onCancel?.(booking)}
+              style={{
+                flex: 1,
+                minHeight: theme.minTouchTarget,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: theme.radius.md,
+                borderWidth: 1,
+                borderColor: theme.colors.border,
+              }}
+            >
+              <Text variant="label" tone="secondary">
+                {t('booking.cancelBooking')}
               </Text>
             </Pressable>
           ) : null}

@@ -89,3 +89,15 @@ export const LOCAL_ANON_KEY =
 export const LOCAL_SERVICE_KEY =
   process.env.TEST_SUPABASE_SERVICE_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
+
+/**
+ * Zeruje liczniki limitu zapytań. Testy funkcji publicznej biją w nią
+ * dziesiątki razy z jednego adresu, więc bez tego przekroczyłyby limit,
+ * który w normalnej pracy dotyczy botów, nie ludzi.
+ */
+export async function resetRateLimits(): Promise<void> {
+  const client = new Client({ connectionString: CONNECTION_STRING });
+  await client.connect();
+  await client.query('delete from public.rate_limits');
+  await client.end();
+}

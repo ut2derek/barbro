@@ -1,6 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
 
 import type { Database } from '@/lib/database.types';
+import { parseRows } from '@/lib/parse';
+import { invalidateClients, queryKeys } from '@/lib/query-keys';
 import { getSupabase } from '@/lib/supabase';
 
 export type ClientOption = {
@@ -17,7 +20,7 @@ export function useClientSearch(args: { salonId: string | undefined; query: stri
   const term = args.query.trim();
 
   return useQuery({
-    queryKey: ['clients', args.salonId, term],
+    queryKey: queryKeys.clients(args.salonId, term),
     enabled: Boolean(args.salonId),
     queryFn: async (): Promise<ClientOption[]> => {
       let request = getSupabase()
@@ -76,7 +79,7 @@ export function useCreateClient() {
       return data.id;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['clients'] });
+      invalidateClients(queryClient);
     },
   });
 }
@@ -85,17 +88,21 @@ export type ClientDetails = ClientOption & {
   firstName: string;
   lastName: string | null;
   internalNote: string | null;
+  /** Ocena rzetelności wystawiona przez salon — klient jej nie widzi. */
+  internalRating: number | null;
   createdAt: string;
 };
 
 export function useClient(clientId: string | undefined) {
   return useQuery({
-    queryKey: ['client', clientId],
+    queryKey: queryKeys.client(clientId),
     enabled: Boolean(clientId),
     queryFn: async (): Promise<ClientDetails> => {
       const { data, error } = await getSupabase()
         .from('clients')
-        .select('id, first_name, last_name, phone, email, no_show_count, blocked, internal_note, created_at')
+        .select(
+          'id, first_name, last_name, phone, email, no_show_count, blocked, internal_note, internal_rating, created_at',
+        )
         .eq('id', clientId!)
         .single();
 
@@ -111,6 +118,7 @@ export function useClient(clientId: string | undefined) {
         noShowCount: data.no_show_count,
         blocked: data.blocked,
         internalNote: data.internal_note,
+        internalRating: data.internal_rating,
         createdAt: data.created_at,
       };
     },
@@ -127,10 +135,20 @@ export type ClientBooking = {
   services: string[];
 };
 
+const clientBookingRow = z.object({
+  id: z.string(),
+  starts_at: z.string(),
+  ends_at: z.string(),
+  status: z.string(),
+  total_price_grosz: z.number(),
+  staff: z.object({ display_name: z.string() }).nullable(),
+  booking_items: z.array(z.object({ name_snapshot: z.string(), item_order: z.number() })),
+});
+
 /** Historia wizyt klienta — od najnowszej. */
 export function useClientBookings(clientId: string | undefined) {
   return useQuery({
-    queryKey: ['client-bookings', clientId],
+    queryKey: queryKeys.clientBookings(clientId),
     enabled: Boolean(clientId),
     queryFn: async (): Promise<ClientBooking[]> => {
       const { data, error } = await getSupabase()
@@ -144,14 +162,14 @@ export function useClientBookings(clientId: string | undefined) {
 
       if (error) throw error;
 
-      return data.map((row) => ({
+      return parseRows(clientBookingRow, data, 'historia wizyt klienta').map((row) => ({
         id: row.id,
         startsAt: row.starts_at,
         endsAt: row.ends_at,
         status: row.status,
         totalPriceGrosz: row.total_price_grosz,
-        staffName: (row.staff as unknown as { display_name: string } | null)?.display_name ?? '',
-        services: (row.booking_items as unknown as { name_snapshot: string; item_order: number }[])
+        staffName: row.staff?.display_name ?? '',
+        services: [...row.booking_items]
           .sort((a, b) => a.item_order - b.item_order)
           .map((item) => item.name_snapshot),
       }));
@@ -166,12 +184,14 @@ export function useUpdateClient() {
     mutationFn: async (args: {
       clientId: string;
       internalNote?: string | null;
+      internalRating?: number | null;
       blocked?: boolean;
       phone?: string;
       email?: string;
     }) => {
       const payload: Database['public']['Tables']['clients']['Update'] = {};
       if (args.internalNote !== undefined) payload.internal_note = args.internalNote?.trim() || null;
+      if (args.internalRating !== undefined) payload.internal_rating = args.internalRating;
       if (args.blocked !== undefined) payload.blocked = args.blocked;
       if (args.phone !== undefined) payload.phone = args.phone.trim();
       if (args.email !== undefined) payload.email = args.email.trim().toLowerCase();
@@ -179,9 +199,6 @@ export function useUpdateClient() {
       const { error } = await getSupabase().from('clients').update(payload).eq('id', args.clientId);
       if (error) throw error;
     },
-    onSuccess: (_result, variables) => {
-      void queryClient.invalidateQueries({ queryKey: ['client', variables.clientId] });
-      void queryClient.invalidateQueries({ queryKey: ['clients'] });
-    },
+    onSuccess: () => invalidateClients(queryClient),
   });
 }

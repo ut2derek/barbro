@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -19,19 +18,19 @@ import { useCurrentSalon } from '@/features/salon/use-current-salon';
 import { t } from '@/i18n';
 import { formatFullDate, formatTimeRange } from '@/lib/format';
 import { useTheme } from '@/theme';
+import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 
-const ZONE = 'Europe/Warsaw';
 const TIME_PATTERN = /^(\d{1,2}):(\d{2})$/;
 
 /** Blokada czasu — dostawa, wizyta u lekarza, przerwa. Zajmuje termin tak jak wizyta. */
 export default function TimeBlockScreen() {
+  const zone = useSalonTimezone();
   const theme = useTheme();
-  const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: staff } = useSalonStaff(salon?.salonId);
 
   const [staffId, setStaffId] = useState<string | null>(null);
-  const [day, setDay] = useState(() => DateTime.now().setZone(ZONE).startOf('day'));
+  const [day, setDay] = useState(() => DateTime.now().setZone(zone).startOf('day'));
   const [from, setFrom] = useState('12:00');
   const [to, setTo] = useState('13:00');
   const [reason, setReason] = useState('');
@@ -41,7 +40,7 @@ export default function TimeBlockScreen() {
 
   const { data: blocks } = useDayTimeBlocks({
     salonId: salon?.salonId,
-    zone: ZONE,
+    zone: zone,
     day,
     staffId: effectiveStaffId,
   });
@@ -105,7 +104,7 @@ export default function TimeBlockScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
         <Button label="‹" variant="secondary" onPress={() => setDay(day.minus({ days: 1 }))} />
         <Text variant="heading" style={{ flex: 1, textAlign: 'center' }}>
-          {formatFullDate(day.toISO()!, ZONE)}
+          {formatFullDate(day.toISO()!, zone)}
         </Text>
         <Button label="›" variant="secondary" onPress={() => setDay(day.plus({ days: 1 }))} />
       </View>
@@ -138,7 +137,7 @@ export default function TimeBlockScreen() {
           {(blocks ?? []).map((block) => (
             <Card key={block.id}>
               <Text variant="bodyStrong">
-                {formatTimeRange(block.startsAt, block.endsAt, ZONE)}
+                {formatTimeRange(block.startsAt, block.endsAt, zone)}
               </Text>
               <Text tone="secondary" variant="small">
                 {block.reason ?? t('timeBlock.noReason')}

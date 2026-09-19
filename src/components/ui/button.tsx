@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, type ViewStyle } from 'react-native';
 
 import { useTheme } from '@/theme';
 

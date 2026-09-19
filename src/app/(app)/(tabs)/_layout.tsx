@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { usePendingApprovalCount } from '@/features/bookings/queries';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
+import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import { t } from '@/i18n';
 import { useTheme } from '@/theme';
 
@@ -31,7 +32,8 @@ export default function TabsLayout() {
   const theme = useTheme();
   const router = useRouter();
   const { data: salon } = useCurrentSalon();
-  const { data: pending = 0 } = usePendingApprovalCount(salon?.salonId);
+  const zone = useSalonTimezone();
+  const { data: pending = 0 } = usePendingApprovalCount({ salonId: salon?.salonId, zone });
 
   const [actionsOpen, setActionsOpen] = useState(false);
 

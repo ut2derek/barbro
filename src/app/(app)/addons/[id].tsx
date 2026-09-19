@@ -1,11 +1,12 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { Input } from '@/components/ui/input';
+import { Loading } from '@/components/ui/loading';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
@@ -14,56 +15,80 @@ import {
   useSaveAddon,
   useServiceAddons,
   useServices,
+  type ServiceAddon,
+  type ServiceOption,
 } from '@/features/services/queries';
 import { t } from '@/i18n';
+import { formatGroszForInput, parsePriceToGrosz } from '@/lib/format';
 import { useTheme } from '@/theme';
 
-/** Kwoty wpisujemy w złotych, w bazie żyją w groszach. */
-function toGrosz(value: string): number | null {
-  const normalized = value.replace(',', '.').trim();
-  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
-  return Math.round(Number(normalized) * 100);
-}
-
+/**
+ * Ekran ładuje dane, formularz je dostaje. Rozdzielone celowo:
+ * formularz montuje się raz, z kluczem opartym o identyfikator dodatku,
+ * więc ponowne pobranie tych samych danych nie kasuje tego, co barber
+ * zdążył wpisać. Wcześniej robił to `useEffect` i wpisane zmiany znikały
+ * po powrocie do aplikacji.
+ */
 export default function AddonFormScreen() {
-  const theme = useTheme();
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const isNew = id === 'new';
 
   const { data: salon } = useCurrentSalon();
-  const { data: addons } = useServiceAddons(salon?.salonId);
+  const { data: addons, isPending } = useServiceAddons(salon?.salonId);
   const { data: services } = useServices({ salonId: salon?.salonId });
-  const saveAddon = useSaveAddon();
-  const deleteAddon = useDeleteAddon();
 
   const existing = isNew ? undefined : addons?.find((addon) => addon.id === id);
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [serviceId, setServiceId] = useState<string | null>(null);
-  const [price, setPrice] = useState('0,00');
-  const [duration, setDuration] = useState('10');
-  const [maxQuantity, setMaxQuantity] = useState('1');
-  const [active, setActive] = useState(true);
+  if (!salon || (!isNew && isPending)) return <Loading />;
+
+  return (
+    <AddonForm
+      key={existing?.id ?? 'new'}
+      salonId={salon.salonId}
+      addonId={isNew ? undefined : id}
+      existing={existing}
+      services={services ?? []}
+      addonsCount={addons?.length ?? 0}
+    />
+  );
+}
+
+function AddonForm({
+  salonId,
+  addonId,
+  existing,
+  services,
+  addonsCount,
+}: {
+  salonId: string;
+  addonId: string | undefined;
+  existing: ServiceAddon | undefined;
+  services: ServiceOption[];
+  addonsCount: number;
+}) {
+  const theme = useTheme();
+  const router = useRouter();
+  const saveAddon = useSaveAddon();
+  const deleteAddon = useDeleteAddon();
+
+  const isNew = addonId === undefined;
+
+  const [name, setName] = useState(existing?.name ?? '');
+  const [description, setDescription] = useState(existing?.description ?? '');
+  const [serviceId, setServiceId] = useState<string | null>(existing?.serviceId ?? null);
+  const [price, setPrice] = useState(
+    existing ? formatGroszForInput(existing.priceGrosz) : '0,00',
+  );
+  const [duration, setDuration] = useState(String(existing?.durationMinutes ?? 10));
+  const [maxQuantity, setMaxQuantity] = useState(String(existing?.maxQuantity ?? 1));
+  const [active, setActive] = useState(existing?.active ?? true);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  useEffect(() => {
-    if (!existing) return;
-    setName(existing.name);
-    setDescription(existing.description ?? '');
-    setServiceId(existing.serviceId);
-    setPrice((existing.priceGrosz / 100).toFixed(2).replace('.', ','));
-    setDuration(String(existing.durationMinutes));
-    setMaxQuantity(String(existing.maxQuantity));
-    setActive(existing.active);
-  }, [existing]);
 
   async function save() {
     setError(null);
 
-    const priceGrosz = toGrosz(price);
+    const priceGrosz = parsePriceToGrosz(price);
     const durationMinutes = Number(duration);
     const quantity = Number(maxQuantity);
 
@@ -76,8 +101,8 @@ export default function AddonFormScreen() {
 
     try {
       await saveAddon.mutateAsync({
-        salonId: salon!.salonId,
-        id: isNew ? undefined : id,
+        salonId,
+        id: addonId,
         serviceId,
         name,
         description,
@@ -85,7 +110,7 @@ export default function AddonFormScreen() {
         durationMinutes,
         maxQuantity: quantity,
         active,
-        sortOrder: isNew ? (addons?.length ?? 0) + 1 : undefined,
+        sortOrder: isNew ? addonsCount + 1 : undefined,
       });
       router.replace('/(app)/addons');
     } catch {
@@ -119,7 +144,7 @@ export default function AddonFormScreen() {
             selected={serviceId === null}
             onPress={() => setServiceId(null)}
           />
-          {(services ?? []).map((service) => (
+          {services.map((service) => (
             <Chip
               key={service.id}
               label={service.name}
@@ -186,7 +211,7 @@ export default function AddonFormScreen() {
               variant="danger"
               loading={deleteAddon.isPending}
               onPress={async () => {
-                await deleteAddon.mutateAsync(id);
+                await deleteAddon.mutateAsync(addonId!);
                 router.replace('/(app)/addons');
               }}
             />

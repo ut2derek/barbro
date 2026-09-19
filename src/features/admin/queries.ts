@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/lib/auth';
+import { queryKeys } from '@/lib/query-keys';
 import { getSupabase } from '@/lib/supabase';
 
 export type SalonOverview = {
@@ -22,7 +23,7 @@ export function useIsAppAdmin() {
   const { user } = useAuth();
 
   return useQuery({
-    queryKey: ['is-app-admin', user?.id],
+    queryKey: queryKeys.isAppAdmin(user?.id),
     enabled: Boolean(user),
     queryFn: async (): Promise<boolean> => {
       const { data, error } = await getSupabase().rpc('is_app_admin');
@@ -34,7 +35,7 @@ export function useIsAppAdmin() {
 
 export function useSalonOverview(enabled: boolean) {
   return useQuery({
-    queryKey: ['admin-salons'],
+    queryKey: queryKeys.adminSalons(),
     enabled,
     queryFn: async (): Promise<SalonOverview[]> => {
       const { data, error } = await getSupabase().rpc('admin_salon_overview');
@@ -69,7 +70,7 @@ export function useSetSalonActive() {
       if (error) throw error;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['admin-salons'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminSalons() });
     },
   });
 }
@@ -99,7 +100,7 @@ export function useCreateSalon() {
       return data as CreatedSalon;
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['admin-salons'] });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.adminSalons() });
     },
   });
 }

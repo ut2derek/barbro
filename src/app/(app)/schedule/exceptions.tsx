@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -19,14 +18,14 @@ import {
 } from '@/features/schedule/queries';
 import { t } from '@/i18n';
 import { useTheme } from '@/theme';
+import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 
-const ZONE = 'Europe/Warsaw';
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Urlopy, dni wolne i dni z innymi godzinami. */
 export default function ExceptionsScreen() {
+  const zone = useSalonTimezone();
   const theme = useTheme();
-  const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: staff } = useSalonStaff(salon?.salonId);
   const { data: myStaffId } = useMyStaffId();
@@ -35,7 +34,7 @@ export default function ExceptionsScreen() {
   const addException = useAddScheduleException();
   const removeException = useRemoveScheduleException();
 
-  const today = DateTime.now().setZone(ZONE).toFormat('yyyy-MM-dd');
+  const today = DateTime.now().setZone(zone).toFormat('yyyy-MM-dd');
 
   const [scope, setScope] = useState<'staff' | 'salon'>('staff');
   const [staffId, setStaffId] = useState<string | null>(null);

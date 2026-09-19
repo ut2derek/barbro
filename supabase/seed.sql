@@ -53,12 +53,17 @@ insert into public.app_admins (user_id) values ('10000000-0000-0000-0000-0000000
 -- Salony
 -- ---------------------------------------------------------------------------
 
-insert into public.salons (id, name, slug, brand_color, address_line, postal_code, city, phone, email, auto_accept)
+-- Grafiki testowe pochodzą z publicznego serwisu z losowymi zdjęciami —
+-- służą wyłącznie podglądowi układu strony rezerwacji.
+insert into public.salons (id, name, slug, brand_color, logo_url, cover_url, address_line, postal_code, city, phone, email, auto_accept)
 values
   ('20000000-0000-0000-0000-000000000001', 'Barbershop Kowalski', 'barbershop-kowalski',
-   '#1F1F23', 'ul. Długa 12', '00-238', 'Warszawa', '+48 500 100 200', 'kontakt@kowalski.test', false),
+   '#1F1F23',
+   'https://picsum.photos/seed/barbro-logo/240/240',
+   'https://picsum.photos/seed/barbro-cover/1200/480',
+   'ul. Długa 12', '00-238', 'Warszawa', '+48 500 100 200', 'kontakt@kowalski.test', false),
   ('20000000-0000-0000-0000-000000000002', 'Salon Obcy', 'salon-obcy',
-   '#3355FF', 'ul. Inna 3', '30-001', 'Kraków', '+48 500 900 900', 'kontakt@obcy.test', true);
+   '#3355FF', null, null, 'ul. Inna 3', '30-001', 'Kraków', '+48 500 900 900', 'kontakt@obcy.test', true);
 
 insert into public.salon_members (salon_id, user_id, role) values
   ('20000000-0000-0000-0000-000000000001', '10000000-0000-0000-0000-000000000002', 'owner'),
@@ -122,6 +127,15 @@ update public.staff_services
 set price_grosz_override = 7000, duration_minutes_override = 40
 where staff_id = '30000000-0000-0000-0000-000000000002'
   and service_id = '50000000-0000-0000-0000-000000000001';
+
+-- Dodatki do usług — doczepiane przy rezerwacji, wydłużają wizytę.
+insert into public.service_addons (salon_id, service_id, name, description, price_grosz, duration_minutes, max_quantity, sort_order) values
+  ('20000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001',
+   'Tuszowanie siwizny', 'Tuszowanie siwych włosów odpowiednio dobraną koloryzacją.', 5000, 20, 1, 1),
+  ('20000000-0000-0000-0000-000000000001', '50000000-0000-0000-0000-000000000001',
+   'Depilacja woskiem nosa', 'Usuwanie nadmiernego owłosienia z nosa woskiem. Szybki zabieg.', 1000, 5, 1, 2),
+  ('20000000-0000-0000-0000-000000000001', null,
+   'Mycie i stylizacja', 'Mycie włosów i ułożenie na koniec wizyty.', 2000, 10, 1, 3);
 
 -- ---------------------------------------------------------------------------
 -- Godziny otwarcia i grafiki

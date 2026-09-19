@@ -6,13 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BookingCard } from '@/components/bookings/booking-card';
 import { CancelSheet } from '@/components/bookings/cancel-sheet';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { useChangeBookingStatus, useDayBookings, type BookingListItem } from '@/features/bookings/queries';
 import { useQuickBookingAction } from '@/features/bookings/use-quick-action';
 import { ACTIVE_STATUSES } from '@/features/bookings/status';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
+import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import { t } from '@/i18n';
 import { formatFullDate, formatPrice } from '@/lib/format';
 import { useTheme } from '@/theme';
@@ -26,7 +26,7 @@ export default function TodayScreen() {
   // Odwoływana wizyta — arkusz z powodem otwiera się nad listą.
   const [cancelling, setCancelling] = useState<BookingListItem | null>(null);
   const changeStatus = useChangeBookingStatus();
-  const zone = 'Europe/Warsaw';
+  const zone = useSalonTimezone();
   const today = DateTime.now().setZone(zone);
 
   const { data: bookings, isPending, error, refetch, isRefetching } = useDayBookings({

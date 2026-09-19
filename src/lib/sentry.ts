@@ -14,3 +14,48 @@ export function initSentry() {
     tracesSampleRate: env.environment === 'production' ? 0.2 : 1.0,
   });
 }
+
+/**
+ * Błąd, którego się spodziewamy i który pokazujemy użytkownikowi — na przykład
+ * „Podaj prawidłowy adres e-mail" albo „Ten termin właśnie się zajął".
+ * Taki błąd nie jest awarią, więc nie zaśmieca Sentry.
+ */
+export function markExpected<T extends Error>(error: T): T {
+  (error as Error & { expected?: boolean }).expected = true;
+  return error;
+}
+
+function isExpected(error: unknown): boolean {
+  return Boolean((error as { expected?: boolean } | null)?.expected);
+}
+
+/**
+ * Zgłoszenie błędu. Jedyna droga, którą błąd ma opuścić aplikację — nie
+ * używamy `console.error`, bo na telefonie użytkownika nikt go nie przeczyta.
+ *
+ * `where` to krótka nazwa miejsca („zapis usługi", „lista wizyt"), żeby
+ * w Sentry dało się grupować bez czytania stosu wywołań.
+ */
+export function captureError(error: unknown, where: string, extra?: Record<string, unknown>) {
+  if (isExpected(error)) return;
+
+  if (__DEV__) {
+    console.error(`[${where}]`, error, extra ?? '');
+  }
+
+  if (!isSentryConfigured) return;
+
+  Sentry.captureException(error, {
+    tags: { where },
+    // Nigdy nie wysyłamy tu danych klienta — wyłącznie identyfikatory i kody.
+    extra,
+  });
+}
+
+/**
+ * Ślad do odtworzenia drogi użytkownika przed błędem. Bez treści formularzy.
+ */
+export function leaveBreadcrumb(message: string, data?: Record<string, unknown>) {
+  if (!isSentryConfigured) return;
+  Sentry.addBreadcrumb({ message, data, level: 'info' });
+}

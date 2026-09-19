@@ -1,5 +1,4 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
@@ -8,8 +7,13 @@ import { Chip } from '@/components/ui/chip';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
+import { Loading } from '@/components/ui/loading';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
-import { useSalonSettings, useUpdateSalonSettings } from '@/features/settings/queries';
+import {
+  useSalonSettings,
+  useUpdateSalonSettings,
+  type SalonSettings,
+} from '@/features/settings/queries';
 import { t } from '@/i18n';
 import { useTheme } from '@/theme';
 
@@ -41,52 +45,53 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   );
 }
 
-/** Ustawienia salonu — decydują, jak zachowa się rezerwacja online. */
+/**
+ * Ustawienia salonu — decydują, jak zachowa się rezerwacja online.
+ *
+ * Ekran ładuje dane, formularz je dostaje. Formularz montuje się raz, więc
+ * ponowne pobranie ustawień nie kasuje wpisanych zmian — wcześniej robił to
+ * `useEffect`, przez co edycja mogła po cichu wrócić do stanu z serwera.
+ */
 export default function SettingsScreen() {
-  const theme = useTheme();
-  const router = useRouter();
   const { data: salon } = useCurrentSalon();
-  const { data: settings } = useSalonSettings(salon?.salonId);
+  const { data: settings, isPending } = useSalonSettings(salon?.salonId);
+
+  if (salon && salon.role !== 'owner') {
+    return (
+      <Screen>
+        <Text variant="title">{t('settings.title')}</Text>
+        <Text tone="secondary">{t('settings.ownerOnly')}</Text>
+      </Screen>
+    );
+  }
+
+  if (!salon || isPending || !settings) return <Loading />;
+
+  return <SettingsForm key={settings.id} salonId={salon.salonId} settings={settings} />;
+}
+
+function SettingsForm({ salonId, settings }: { salonId: string; settings: SalonSettings }) {
+  const theme = useTheme();
   const update = useUpdateSalonSettings();
 
   const [form, setForm] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    addressLine: '',
-    postalCode: '',
-    city: '',
-    holdMinutes: '20',
-    minLeadMinutes: '120',
-    bookingHorizonDays: '60',
-    clientCancelLeadHours: '12',
-    cancellationPolicyText: '',
+    name: settings.name,
+    phone: settings.phone ?? '',
+    email: settings.email ?? '',
+    addressLine: settings.addressLine ?? '',
+    postalCode: settings.postalCode ?? '',
+    city: settings.city ?? '',
+    holdMinutes: String(settings.holdMinutes),
+    minLeadMinutes: String(settings.minLeadMinutes),
+    bookingHorizonDays: String(settings.bookingHorizonDays),
+    clientCancelLeadHours: String(settings.clientCancelLeadHours),
+    cancellationPolicyText: settings.cancellationPolicyText ?? '',
   });
-  const [slotStep, setSlotStep] = useState(15);
-  const [autoAccept, setAutoAccept] = useState(false);
-  const [onlineBooking, setOnlineBooking] = useState(true);
+  const [slotStep, setSlotStep] = useState(settings.slotStepMinutes);
+  const [autoAccept, setAutoAccept] = useState(settings.autoAccept);
+  const [onlineBooking, setOnlineBooking] = useState(settings.onlineBookingEnabled);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    if (!settings) return;
-    setForm({
-      name: settings.name,
-      phone: settings.phone ?? '',
-      email: settings.email ?? '',
-      addressLine: settings.addressLine ?? '',
-      postalCode: settings.postalCode ?? '',
-      city: settings.city ?? '',
-      holdMinutes: String(settings.holdMinutes),
-      minLeadMinutes: String(settings.minLeadMinutes),
-      bookingHorizonDays: String(settings.bookingHorizonDays),
-      clientCancelLeadHours: String(settings.clientCancelLeadHours),
-      cancellationPolicyText: settings.cancellationPolicyText ?? '',
-    });
-    setSlotStep(settings.slotStepMinutes);
-    setAutoAccept(settings.autoAccept);
-    setOnlineBooking(settings.onlineBookingEnabled);
-  }, [settings]);
 
   async function save() {
     setError(null);
@@ -115,7 +120,7 @@ export default function SettingsScreen() {
 
     try {
       await update.mutateAsync({
-        salonId: salon!.salonId,
+        salonId,
         changes: {
           name: form.name,
           phone: form.phone || null,
@@ -134,15 +139,6 @@ export default function SettingsScreen() {
     } catch {
       setError(t('settings.saveError'));
     }
-  }
-
-  if (salon && salon.role !== 'owner') {
-    return (
-      <Screen>
-        <Text variant="title">{t('settings.title')}</Text>
-        <Text tone="secondary">{t('settings.ownerOnly')}</Text>
-      </Screen>
-    );
   }
 
   return (

@@ -1,86 +1,101 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { Input } from '@/components/ui/input';
+import { Loading } from '@/components/ui/loading';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
+import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import {
   useDeleteService,
   useSaveService,
   useServiceCategories,
   useServices,
+  type ServiceCategory,
+  type ServiceOption,
 } from '@/features/services/queries';
 import { t } from '@/i18n';
-import { formatPrice } from '@/lib/format';
+import { formatGroszForInput, formatPrice, parsePriceToGrosz } from '@/lib/format';
 import { useTheme } from '@/theme';
 
-const ZONE = 'Europe/Warsaw';
-
-/** Kwoty wpisujemy w złotych, w bazie żyją w groszach. */
-function toGrosz(value: string): number | null {
-  const normalized = value.replace(',', '.').trim();
-  if (!/^\d+(\.\d{1,2})?$/.test(normalized)) return null;
-  return Math.round(Number(normalized) * 100);
-}
-
-function fromGrosz(grosz: number): string {
-  return (grosz / 100).toFixed(2).replace('.', ',');
-}
-
+/**
+ * Ekran ładuje dane, formularz je dostaje. Formularz montuje się raz, więc
+ * ponowne pobranie cennika (powrót do aplikacji, odświeżenie cache) nie
+ * kasuje tego, co barber zdążył wpisać — wcześniej robił to `useEffect`.
+ */
 export default function ServiceFormScreen() {
-  const theme = useTheme();
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const isNew = id === 'new';
 
   const { data: salon } = useCurrentSalon();
-  const { data: services } = useServices({ salonId: salon?.salonId });
+  const { data: services, isPending } = useServices({ salonId: salon?.salonId });
   const { data: categories } = useServiceCategories(salon?.salonId);
-  const saveService = useSaveService();
-  const deleteService = useDeleteService();
 
   const existing = isNew ? undefined : services?.find((service) => service.id === id);
 
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [categoryId, setCategoryId] = useState<string | null>(null);
-  const [duration, setDuration] = useState('45');
-  const [buffer, setBuffer] = useState('0');
-  const [price, setPrice] = useState('0,00');
-  const [visible, setVisible] = useState(true);
-  const [promoEnabled, setPromoEnabled] = useState(false);
-  const [promoPrice, setPromoPrice] = useState('');
-  const [promoDays, setPromoDays] = useState('7');
+  if (!salon || (!isNew && isPending)) return <Loading />;
+
+  return (
+    <ServiceForm
+      key={existing?.id ?? 'new'}
+      salonId={salon.salonId}
+      serviceId={isNew ? undefined : id}
+      existing={existing}
+      categories={categories ?? []}
+    />
+  );
+}
+
+function ServiceForm({
+  salonId,
+  serviceId,
+  existing,
+  categories,
+}: {
+  salonId: string;
+  serviceId: string | undefined;
+  existing: ServiceOption | undefined;
+  categories: ServiceCategory[];
+}) {
+  const zone = useSalonTimezone();
+  const theme = useTheme();
+  const router = useRouter();
+  const saveService = useSaveService();
+  const deleteService = useDeleteService();
+
+  const isNew = serviceId === undefined;
+
+  const promoEndsIn = existing?.promoEndsAt
+    ? String(Math.max(1, Math.ceil(DateTime.fromISO(existing.promoEndsAt).diffNow('days').days)))
+    : '7';
+
+  const [name, setName] = useState(existing?.name ?? '');
+  const [description, setDescription] = useState(existing?.description ?? '');
+  const [categoryId, setCategoryId] = useState<string | null>(existing?.categoryId ?? null);
+  const [duration, setDuration] = useState(String(existing?.durationMinutes ?? 45));
+  const [buffer, setBuffer] = useState(String(existing?.bufferAfterMinutes ?? 0));
+  const [price, setPrice] = useState(
+    existing ? formatGroszForInput(existing.regularPriceGrosz) : '0,00',
+  );
+  const [visible, setVisible] = useState(existing?.visible ?? true);
+  const [promoEnabled, setPromoEnabled] = useState(existing?.promoActive ?? false);
+  const [promoPrice, setPromoPrice] = useState(
+    existing?.promoActive ? formatGroszForInput(existing.priceGrosz) : '',
+  );
+  const [promoDays, setPromoDays] = useState(existing?.promoActive ? promoEndsIn : '7');
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  useEffect(() => {
-    if (!existing) return;
-    setName(existing.name);
-    setDescription(existing.description ?? '');
-    setCategoryId(existing.categoryId);
-    setDuration(String(existing.durationMinutes));
-    setBuffer(String(existing.bufferAfterMinutes));
-    setPrice(fromGrosz(existing.regularPriceGrosz));
-    setVisible(existing.visible);
-    setPromoEnabled(existing.promoActive);
-    if (existing.promoActive) {
-      setPromoPrice(fromGrosz(existing.priceGrosz));
-      const ends = existing.promoEndsAt ? DateTime.fromISO(existing.promoEndsAt) : null;
-      setPromoDays(ends ? String(Math.max(1, Math.ceil(ends.diffNow('days').days))) : '7');
-    }
-  }, [existing]);
 
   async function save() {
     setError(null);
 
-    const priceGrosz = toGrosz(price);
+    const priceGrosz = parsePriceToGrosz(price);
     const durationMinutes = Number(duration);
     const bufferMinutes = Number(buffer);
 
@@ -96,25 +111,23 @@ export default function ServiceFormScreen() {
     let promoEndsAt: string | null = null;
 
     if (promoEnabled) {
-      promoPriceGrosz = toGrosz(promoPrice);
+      promoPriceGrosz = parsePriceToGrosz(promoPrice);
       const days = Number(promoDays);
 
       if (promoPriceGrosz === null) return setError(t('serviceForm.badPromoPrice'));
       if (promoPriceGrosz >= priceGrosz) return setError(t('serviceForm.promoNotLower'));
       if (!Number.isInteger(days) || days < 1) return setError(t('serviceForm.badPromoDays'));
 
-      const now = DateTime.now().setZone(ZONE);
       // Promocja zaczyna się teraz, żeby historia cen miała sensowny punkt odniesienia.
-      promoStartsAt = existing?.promoActive
-        ? (existing.promoEndsAt ? now.toISO() : now.toISO())
-        : now.toISO();
+      const now = DateTime.now().setZone(zone);
+      promoStartsAt = now.toISO();
       promoEndsAt = now.plus({ days }).toISO();
     }
 
     try {
       await saveService.mutateAsync({
-        salonId: salon!.salonId,
-        id: isNew ? undefined : id,
+        salonId,
+        id: serviceId,
         name,
         description,
         categoryId,
@@ -157,7 +170,7 @@ export default function ServiceFormScreen() {
             selected={categoryId === null}
             onPress={() => setCategoryId(null)}
           />
-          {(categories ?? []).map((category) => (
+          {categories.map((category) => (
             <Chip
               key={category.id}
               label={category.name}
@@ -266,7 +279,7 @@ export default function ServiceFormScreen() {
               variant="danger"
               loading={deleteService.isPending}
               onPress={async () => {
-                await deleteService.mutateAsync(id);
+                await deleteService.mutateAsync(serviceId!);
                 router.replace('/(app)/services');
               }}
             />

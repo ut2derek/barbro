@@ -235,7 +235,7 @@ describe('opinia przez link klienta', () => {
   });
 
   it('bez ważnego linku nie da się ocenić', async () => {
-    const response = await call({ action: 'submitReview', token: 'zmyslony', rating: 5 });
+    const response = await call({ action: 'submitReview', token: 'a1b2c3d4'.repeat(6), rating: 5 });
     expect(response.status).toBe(404);
   });
 });

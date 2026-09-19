@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
 
+import { parseRows } from '@/lib/parse';
+import { invalidateServices, queryKeys } from '@/lib/query-keys';
 import { getSupabase } from '@/lib/supabase';
 
 export type ServiceOption = {
@@ -28,6 +31,19 @@ export type ServiceCategory = {
   sortOrder: number;
 };
 
+const serviceRow = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  duration_minutes: z.number(),
+  buffer_after_minutes: z.number(),
+  price_grosz: z.number(),
+  visible: z.boolean(),
+  sort_order: z.number(),
+  category_id: z.string().nullable(),
+  service_categories: z.object({ name: z.string(), sort_order: z.number() }).nullable(),
+});
+
 /**
  * Usługi wraz z cenami. Ceny liczy funkcja w bazie — ta sama, której użyje
  * strona rezerwacji — więc aplikacja nie powiela reguł promocji.
@@ -36,7 +52,7 @@ export function useServices(args: { salonId: string | undefined; staffId?: strin
   const { salonId, staffId } = args;
 
   return useQuery({
-    queryKey: ['services', salonId, staffId ?? 'all'],
+    queryKey: queryKeys.services(salonId, staffId ?? 'all'),
     enabled: Boolean(salonId),
     queryFn: async (): Promise<ServiceOption[]> => {
       const supabase = getSupabase();
@@ -57,14 +73,10 @@ export function useServices(args: { salonId: string | undefined; staffId?: strin
 
       const pricing = new Map(pricingResult.data.map((row) => [row.service_id, row]));
 
-      return servicesResult.data
+      return parseRows(serviceRow, servicesResult.data, 'usługi salonu')
         .filter((service) => pricing.has(service.id))
         .map((service) => {
           const price = pricing.get(service.id)!;
-          const category = service.service_categories as unknown as {
-            name: string;
-            sort_order: number;
-          } | null;
 
           return {
             id: service.id,
@@ -80,7 +92,7 @@ export function useServices(args: { salonId: string | undefined; staffId?: strin
             visible: service.visible,
             sortOrder: service.sort_order,
             categoryId: service.category_id,
-            categoryName: category?.name ?? null,
+            categoryName: service.service_categories?.name ?? null,
           };
         });
     },
@@ -89,7 +101,7 @@ export function useServices(args: { salonId: string | undefined; staffId?: strin
 
 export function useServiceCategories(salonId: string | undefined) {
   return useQuery({
-    queryKey: ['service-categories', salonId],
+    queryKey: queryKeys.serviceCategories(salonId),
     enabled: Boolean(salonId),
     queryFn: async (): Promise<ServiceCategory[]> => {
       const { data, error } = await getSupabase()
@@ -104,14 +116,13 @@ export function useServiceCategories(salonId: string | undefined) {
   });
 }
 
+/**
+ * Zmiana w cenniku dotyka wszystkiego, co pokazuje usługi i wolne terminy —
+ * także strony rezerwacji dla klienta. Lista jest jedna, w `lib/query-keys`.
+ */
 function useServiceInvalidation() {
   const queryClient = useQueryClient();
-
-  return () => {
-    void queryClient.invalidateQueries({ queryKey: ['services'] });
-    void queryClient.invalidateQueries({ queryKey: ['service-categories'] });
-    void queryClient.invalidateQueries({ queryKey: ['slots'] });
-  };
+  return () => invalidateServices(queryClient);
 }
 
 export type ServiceInput = {
@@ -271,9 +282,22 @@ export type ServiceAddon = {
   sortOrder: number;
 };
 
+const addonRow = z.object({
+  id: z.string(),
+  service_id: z.string().nullable(),
+  name: z.string(),
+  description: z.string().nullable(),
+  price_grosz: z.number(),
+  duration_minutes: z.number(),
+  max_quantity: z.number(),
+  active: z.boolean(),
+  sort_order: z.number(),
+  services: z.object({ name: z.string() }).nullable(),
+});
+
 export function useServiceAddons(salonId: string | undefined) {
   return useQuery({
-    queryKey: ['service-addons', salonId],
+    queryKey: queryKeys.addons(salonId),
     enabled: Boolean(salonId),
     queryFn: async (): Promise<ServiceAddon[]> => {
       const { data, error } = await getSupabase()
@@ -286,10 +310,10 @@ export function useServiceAddons(salonId: string | undefined) {
 
       if (error) throw error;
 
-      return data.map((addon) => ({
+      return parseRows(addonRow, data, 'dodatki do usług').map((addon) => ({
         id: addon.id,
         serviceId: addon.service_id,
-        serviceName: (addon.services as unknown as { name: string } | null)?.name ?? null,
+        serviceName: addon.services?.name ?? null,
         name: addon.name,
         description: addon.description,
         priceGrosz: addon.price_grosz,

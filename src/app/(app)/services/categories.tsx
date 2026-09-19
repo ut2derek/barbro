@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -19,7 +18,6 @@ import { useTheme } from '@/theme';
 /** Kategorie porządkują cennik — „Strzyżenie”, „Broda”, „Koloryzacja”. */
 export default function CategoriesScreen() {
   const theme = useTheme();
-  const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: categories } = useServiceCategories(salon?.salonId);
 

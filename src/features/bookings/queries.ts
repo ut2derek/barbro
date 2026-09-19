@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { DateTime } from 'luxon';
+import { z } from 'zod';
 
 import type { Database } from '@/lib/database.types';
+import { parseRow, parseRows } from '@/lib/parse';
+import { invalidateBookings, invalidateTimeBlocks, queryKeys } from '@/lib/query-keys';
 import { getSupabase } from '@/lib/supabase';
 
 export type BookingStatus = Database['public']['Enums']['booking_status'];
@@ -29,32 +32,51 @@ const BOOKING_FIELDS = `
   booking_items ( service_id, name_snapshot, price_grosz, duration_minutes, item_order )
 ` as const;
 
-type BookingRow = {
-  id: string;
-  starts_at: string;
-  ends_at: string;
-  status: BookingStatus;
-  total_price_grosz: number;
-  client_note: string | null;
-  cancellation_comment: string | null;
-  staff_id: string;
-  staff: { display_name: string } | null;
-  clients: { first_name: string; last_name: string | null; phone: string; email: string; no_show_count: number } | null;
-  booking_items: {
-    service_id: string | null;
-    name_snapshot: string;
-    price_grosz: number;
-    duration_minutes: number;
-    item_order: number;
-  }[];
-};
+/**
+ * Kształt wiersza z bazy opisany schematem, nie obietnicą. Supabase nie potrafi
+ * otypować dołączonych tabel, więc wcześniej stało tu `as unknown as` — zapis,
+ * który wyłącza sprawdzanie typów. Teraz niezgodność widać od razu.
+ */
+const bookingRow = z.object({
+  id: z.string(),
+  starts_at: z.string(),
+  ends_at: z.string(),
+  status: z.string(),
+  total_price_grosz: z.number(),
+  client_note: z.string().nullable(),
+  cancellation_comment: z.string().nullable(),
+  staff_id: z.string(),
+  staff: z.object({ display_name: z.string() }).nullable(),
+  clients: z
+    .object({
+      first_name: z.string(),
+      last_name: z.string().nullable(),
+      phone: z.string(),
+      email: z.string(),
+      no_show_count: z.number(),
+    })
+    .nullable(),
+  booking_items: z.array(
+    z.object({
+      service_id: z.string().nullable(),
+      name_snapshot: z.string(),
+      price_grosz: z.number(),
+      duration_minutes: z.number(),
+      item_order: z.number(),
+    }),
+  ),
+});
+
+type BookingRow = z.infer<typeof bookingRow>;
 
 function toListItem(row: BookingRow): BookingListItem {
+  const items = [...row.booking_items].sort((a, b) => a.item_order - b.item_order);
+
   return {
     id: row.id,
     startsAt: row.starts_at,
     endsAt: row.ends_at,
-    status: row.status,
+    status: row.status as BookingStatus,
     totalPriceGrosz: row.total_price_grosz,
     staffId: row.staff_id,
     staffName: row.staff?.display_name ?? '',
@@ -62,13 +84,8 @@ function toListItem(row: BookingRow): BookingListItem {
     clientPhone: row.clients?.phone ?? '',
     clientNote: row.client_note,
     cancellationComment: row.cancellation_comment,
-    services: [...row.booking_items]
-      .sort((a, b) => a.item_order - b.item_order)
-      .map((item) => item.name_snapshot),
-    serviceIds: [...row.booking_items]
-      .sort((a, b) => a.item_order - b.item_order)
-      .map((item) => item.service_id)
-      .filter((id): id is string => Boolean(id)),
+    services: items.map((item) => item.name_snapshot),
+    serviceIds: items.map((item) => item.service_id).filter((id): id is string => Boolean(id)),
   };
 }
 
@@ -80,10 +97,10 @@ export function useDayBookings(args: {
   staffId?: string | null;
 }) {
   const { salonId, zone, day, staffId } = args;
-  const dayKey = day.setZone(zone).toISODate();
+  const dayKey = day.setZone(zone).toISODate() ?? '';
 
   return useQuery({
-    queryKey: ['bookings', salonId, dayKey, staffId ?? 'all'],
+    queryKey: queryKeys.bookingsDay(salonId, dayKey, staffId ?? 'all'),
     enabled: Boolean(salonId),
     queryFn: async (): Promise<BookingListItem[]> => {
       const start = day.setZone(zone).startOf('day');
@@ -102,14 +119,14 @@ export function useDayBookings(args: {
       const { data, error } = await request;
       if (error) throw error;
 
-      return (data as unknown as BookingRow[]).map(toListItem);
+      return parseRows(bookingRow, data, 'wizyty dnia').map(toListItem);
     },
   });
 }
 
 export function useBooking(bookingId: string | undefined) {
   return useQuery({
-    queryKey: ['booking', bookingId],
+    queryKey: queryKeys.booking(bookingId),
     enabled: Boolean(bookingId),
     queryFn: async (): Promise<BookingListItem> => {
       const { data, error } = await getSupabase()
@@ -119,7 +136,7 @@ export function useBooking(bookingId: string | undefined) {
         .single();
 
       if (error) throw error;
-      return toListItem(data as unknown as BookingRow);
+      return toListItem(parseRow(bookingRow, data, 'szczegóły wizyty'));
     },
   });
 }
@@ -129,6 +146,7 @@ export function useChangeBookingStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ['change-booking-status'],
     mutationFn: async (args: { bookingId: string; status: BookingStatus; comment?: string }) => {
       const { error } = await getSupabase().rpc('change_booking_status', {
         p_booking_id: args.bookingId,
@@ -137,10 +155,7 @@ export function useChangeBookingStatus() {
       });
       if (error) throw error;
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      void queryClient.invalidateQueries({ queryKey: ['booking'] });
-    },
+    onSuccess: () => invalidateBookings(queryClient),
   });
 }
 
@@ -148,6 +163,7 @@ export function useRescheduleBooking() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ['reschedule-booking'],
     mutationFn: async (args: { bookingId: string; newStartsAt: string; staffId?: string }) => {
       const { data, error } = await getSupabase().rpc('reschedule_booking', {
         p_booking_id: args.bookingId,
@@ -157,16 +173,13 @@ export function useRescheduleBooking() {
       if (error) throw error;
       return data as string;
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      void queryClient.invalidateQueries({ queryKey: ['booking'] });
-    },
+    onSuccess: () => invalidateBookings(queryClient),
   });
 }
 
 export function useSalonStaff(salonId: string | undefined) {
   return useQuery({
-    queryKey: ['staff', salonId],
+    queryKey: queryKeys.staff(salonId),
     enabled: Boolean(salonId),
     queryFn: async () => {
       const { data, error } = await getSupabase()
@@ -182,6 +195,8 @@ export function useSalonStaff(salonId: string | undefined) {
   });
 }
 
+export type Slot = { slot_start: string; slot_end: string; staff_id: string };
+
 /** Wolne terminy liczy baza — aplikacja tylko pyta. */
 export function useAvailableSlots(args: {
   salonId: string | undefined;
@@ -191,17 +206,22 @@ export function useAvailableSlots(args: {
   staffId?: string | null;
   enabled?: boolean;
 }) {
-  const dayKey = args.day.setZone(args.zone).toISODate();
+  const dayKey = args.day.setZone(args.zone).toISODate() ?? '';
 
   return useQuery({
-    queryKey: ['slots', args.salonId, dayKey, args.staffId ?? 'all', args.serviceIds.join(',')],
+    queryKey: queryKeys.slots(
+      args.salonId,
+      dayKey,
+      args.staffId ?? 'all',
+      args.serviceIds.join(','),
+    ),
     enabled: Boolean(args.salonId) && args.serviceIds.length > 0 && args.enabled !== false,
-    queryFn: async () => {
+    queryFn: async (): Promise<Slot[]> => {
       const { data, error } = await getSupabase().rpc('get_available_slots', {
         p_salon_id: args.salonId!,
         p_service_ids: args.serviceIds,
-        p_from: dayKey!,
-        p_to: dayKey!,
+        p_from: dayKey,
+        p_to: dayKey,
         p_staff_id: args.staffId ?? undefined,
       });
       if (error) throw error;
@@ -215,6 +235,7 @@ export function useCreateBooking() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ['create-booking'],
     mutationFn: async (args: {
       salonId: string;
       staffId: string;
@@ -235,10 +256,7 @@ export function useCreateBooking() {
       if (error) throw error;
       return data as string;
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['bookings'] });
-      void queryClient.invalidateQueries({ queryKey: ['slots'] });
-    },
+    onSuccess: () => invalidateBookings(queryClient),
   });
 }
 
@@ -251,16 +269,25 @@ export type TimeBlock = {
   reason: string | null;
 };
 
+const timeBlockRow = z.object({
+  id: z.string(),
+  staff_id: z.string(),
+  starts_at: z.string(),
+  ends_at: z.string(),
+  reason: z.string().nullable(),
+  staff: z.object({ display_name: z.string() }).nullable(),
+});
+
 export function useDayTimeBlocks(args: {
   salonId: string | undefined;
   zone: string;
   day: DateTime;
   staffId?: string | null;
 }) {
-  const dayKey = args.day.setZone(args.zone).toISODate();
+  const dayKey = args.day.setZone(args.zone).toISODate() ?? '';
 
   return useQuery({
-    queryKey: ['time-blocks', args.salonId, dayKey, args.staffId ?? 'all'],
+    queryKey: queryKeys.timeBlocks(args.salonId, dayKey, args.staffId ?? 'all'),
     enabled: Boolean(args.salonId),
     queryFn: async (): Promise<TimeBlock[]> => {
       const start = args.day.setZone(args.zone).startOf('day');
@@ -279,10 +306,10 @@ export function useDayTimeBlocks(args: {
       const { data, error } = await request;
       if (error) throw error;
 
-      return data.map((row) => ({
+      return parseRows(timeBlockRow, data, 'blokady czasu').map((row) => ({
         id: row.id,
         staffId: row.staff_id,
-        staffName: (row.staff as unknown as { display_name: string } | null)?.display_name ?? '',
+        staffName: row.staff?.display_name ?? '',
         startsAt: row.starts_at,
         endsAt: row.ends_at,
         reason: row.reason,
@@ -295,6 +322,7 @@ export function useCreateTimeBlock() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ['create-time-block'],
     mutationFn: async (args: {
       salonId: string;
       staffId: string;
@@ -311,10 +339,7 @@ export function useCreateTimeBlock() {
       });
       if (error) throw error;
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['time-blocks'] });
-      void queryClient.invalidateQueries({ queryKey: ['slots'] });
-    },
+    onSuccess: () => invalidateTimeBlocks(queryClient),
   });
 }
 
@@ -322,14 +347,12 @@ export function useDeleteTimeBlock() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    mutationKey: ['delete-time-block'],
     mutationFn: async (blockId: string) => {
       const { error } = await getSupabase().from('time_blocks').delete().eq('id', blockId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['time-blocks'] });
-      void queryClient.invalidateQueries({ queryKey: ['slots'] });
-    },
+    onSuccess: () => invalidateTimeBlocks(queryClient),
   });
 }
 
@@ -344,10 +367,10 @@ export function useBookingsInRange(args: {
   days: number;
   staffId?: string | null;
 }) {
-  const fromKey = args.from.setZone(args.zone).toISODate();
+  const fromKey = args.from.setZone(args.zone).toISODate() ?? '';
 
   return useQuery({
-    queryKey: ['bookings-week', args.salonId, fromKey, args.days, args.staffId ?? 'all'],
+    queryKey: queryKeys.bookingsWeek(args.salonId, fromKey, args.days, args.staffId ?? 'all'),
     enabled: Boolean(args.salonId),
     queryFn: async (): Promise<BookingListItem[]> => {
       const start = args.from.setZone(args.zone).startOf('day');
@@ -366,26 +389,26 @@ export function useBookingsInRange(args: {
       const { data, error } = await request;
       if (error) throw error;
 
-      return (data as unknown as BookingRow[]).map(toListItem);
+      return parseRows(bookingRow, data, 'wizyty zakresu').map(toListItem);
     },
   });
 }
 
 /** Liczba wizyt czekających na akceptację — pokazywana kropką na zakładce „Dziś”. */
-export function usePendingApprovalCount(salonId: string | undefined) {
+export function usePendingApprovalCount(args: { salonId: string | undefined; zone: string }) {
   return useQuery({
-    queryKey: ['pending-approval-count', salonId],
-    enabled: Boolean(salonId),
+    queryKey: queryKeys.pendingApprovalCount(args.salonId),
+    enabled: Boolean(args.salonId),
     refetchInterval: 60_000,
     queryFn: async (): Promise<number> => {
       const { count, error } = await getSupabase()
         .from('bookings')
         .select('id', { count: 'exact', head: true })
-        .eq('salon_id', salonId!)
+        .eq('salon_id', args.salonId!)
         .eq('status', 'pending_approval')
         // Wizyta sprzed godziny, której nikt nie zaakceptował, nadal wymaga
         // decyzji — liczymy od początku dzisiejszego dnia, nie od „teraz”.
-        .gte('starts_at', DateTime.now().setZone('Europe/Warsaw').startOf('day').toISO()!);
+        .gte('starts_at', DateTime.now().setZone(args.zone).startOf('day').toISO()!);
 
       if (error) throw error;
       return count ?? 0;
