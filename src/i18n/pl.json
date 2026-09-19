@@ -353,7 +353,9 @@
     "settingsDescription": "Dane salonu i zasady rezerwacji online.",
     "account": "Moje konto",
     "accountDescription": "Wylogowanie i usunięcie konta.",
-    "adminDescription": "Salony na platformie — widok właściciela produktu."
+    "adminDescription": "Salony na platformie — widok właściciela produktu.",
+    "switchAccount": "Przełącz konto testowe",
+    "switchAccountHint": "Widoczne tylko w trybie deweloperskim — wylogowuje i loguje wybranym kontem."
   },
   "clients": {
     "title": "Klienci",
