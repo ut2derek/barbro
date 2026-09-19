@@ -13,6 +13,10 @@ create table public.bookings (
   -- więc wizyta 10:00–11:00 i 11:00–12:00 nie kolidują.
   time_range tstzrange generated always as (tstzrange(starts_at, ends_at, '[)')) stored,
 
+  -- Przerwa po ostatniej usłudze. Nie jest częścią wizyty, ale blokuje czas
+  -- fryzjera — liczenie wolnych terminów bierze ją pod uwagę.
+  buffer_after_minutes integer not null default 0 check (buffer_after_minutes >= 0),
+
   status public.booking_status not null default 'pending_confirmation',
   -- Cena zapisana w momencie rezerwacji; nigdy się nie zmienia.
   total_price_grosz integer not null default 0 check (total_price_grosz >= 0),

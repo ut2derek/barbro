@@ -186,12 +186,18 @@ begin
     cs.slot_start >= v_now + make_interval(mins => v_min_lead)
     -- horyzont rezerwacji
     and (cs.slot_start at time zone v_tz)::date <= v_today + v_horizon
-    -- kolizja z istniejącą wizytą (jej zakres zawiera już przerwę po niej)
+    -- Kolizja z istniejącą wizytą. Wizyta trwa tyle, co usługi, ale blokuje
+    -- też przerwę po sobie (CLAUDE.md, reguła 1) — dlatego porównujemy zakres
+    -- wydłużony o `buffer_after_minutes`, a nie samo `time_range`.
     and not exists (
       select 1 from public.bookings b
       where b.staff_id = cs.staff_id
         and b.status in ('pending_confirmation', 'pending_approval', 'confirmed', 'completed')
-        and b.time_range && tstzrange(cs.slot_start, cs.block_end, '[)')
+        and tstzrange(
+              b.starts_at,
+              b.ends_at + make_interval(mins => coalesce(b.buffer_after_minutes, 0)),
+              '[)'
+            ) && tstzrange(cs.slot_start, cs.block_end, '[)')
     )
     -- kolizja z ręczną blokadą czasu
     and not exists (

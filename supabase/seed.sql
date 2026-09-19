@@ -16,15 +16,22 @@ returns void
 language plpgsql
 as $$
 begin
+  -- Kolumny tokenów muszą być pustymi napisami, nie NULL-ami. Usługa logowania
+  -- czyta je jako teksty i na NULL-u przewraca się z błędem
+  -- „Database error querying schema”, przez co żadne konto testowe się nie loguje.
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
     email_confirmed_at, created_at, updated_at,
-    raw_app_meta_data, raw_user_meta_data
+    raw_app_meta_data, raw_user_meta_data,
+    confirmation_token, recovery_token, email_change_token_new,
+    email_change_token_current, email_change, phone_change, phone_change_token,
+    reauthentication_token
   ) values (
     '00000000-0000-0000-0000-000000000000', p_id, 'authenticated', 'authenticated', p_email,
     crypt('haslo123', gen_salt('bf')),
     now(), now(), now(),
-    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb
+    '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb,
+    '', '', '', '', '', '', '', ''
   );
 
   insert into auth.identities (id, user_id, identity_data, provider, provider_id, last_sign_in_at, created_at, updated_at)
@@ -241,3 +248,13 @@ values ('20000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-0000000
         (current_date + time '09:00') at time zone 'Europe/Warsaw',
         (current_date + time '09:30') at time zone 'Europe/Warsaw',
         'confirmed', 5000, 'web');
+-- Dodatki do usług. „Mycie" bez wskazanej usługi — proponujemy je przy każdej;
+-- „Tuszowanie siwizny" tylko przy strzyżeniu.
+insert into public.service_addons
+  (id, salon_id, service_id, name, description, price_grosz, duration_minutes, max_quantity, sort_order)
+values
+  ('70000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', null,
+   'Mycie', 'Szampon i odżywka', 1000, 10, 1, 1),
+  ('70000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001',
+   '50000000-0000-0000-0000-000000000001',
+   'Tuszowanie siwizny', 'Delikatne przyciemnienie', 5000, 20, 1, 2);

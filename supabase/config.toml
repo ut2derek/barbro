@@ -1,3 +1,7 @@
+# Nazwa lokalnego środowiska. Bez niej Supabase CLI bierze nazwę katalogu, więc
+# kontenery nazywały się `supabase_db_BARBRO_-_APP_-_FINAL` — inaczej u każdego,
+# kto sklonuje repozytorium pod inną nazwą, i niezgodnie z poleceniami w README.
+project_id = "barbro"
 
 # Strona rezerwacji działa bez logowania — klient nie ma konta.
 # Dostępu pilnuje sama funkcja: salon musi być włączony i przyjmować rezerwacje.
