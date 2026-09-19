@@ -4,6 +4,7 @@ import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BookingCard } from '@/components/bookings/booking-card';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
 import { useDayBookings } from '@/features/bookings/queries';
@@ -88,6 +89,8 @@ export default function TodayScreen() {
             <Text tone="secondary">{t('today.emptyDescription')}</Text>
           </Card>
         )}
+
+        <Button label={t('newBooking.title')} onPress={() => router.push('/(app)/new-booking')} />
       </ScrollView>
     </SafeAreaView>
   );

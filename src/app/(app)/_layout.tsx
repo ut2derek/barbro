@@ -31,9 +31,14 @@ export default function AppLayout() {
     >
       <Tabs.Screen name="index" options={{ title: t('today.title') }} />
       <Tabs.Screen name="calendar" options={{ title: t('calendar.title') }} />
+      <Tabs.Screen name="services/index" options={{ title: t('services.title') }} />
       <Tabs.Screen name="account" options={{ title: t('account.title') }} />
       {/* Szczegóły otwierają się z listy, więc nie ma dla nich zakładki. */}
       <Tabs.Screen name="booking/[id]/index" options={{ href: null }} />
+      <Tabs.Screen name="new-booking" options={{ href: null }} />
+      <Tabs.Screen name="time-block" options={{ href: null }} />
+      <Tabs.Screen name="services/[id]" options={{ href: null }} />
+      <Tabs.Screen name="services/categories" options={{ href: null }} />
       <Tabs.Screen name="booking/[id]/reschedule" options={{ href: null }} />
     </Tabs>
   );
