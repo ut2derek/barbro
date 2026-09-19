@@ -78,7 +78,11 @@ export async function setSalonHours(
   close: string,
 ): Promise<void> {
   await db.query(
-    `insert into public.salon_hours (salon_id, weekday, open_time, close_time) values ($1, $2, $3, $4)`,
+    // „set”, nie „add” — ponowne ustawienie tego samego dnia ma nadpisać
+    // godziny, a nie wywrócić się na unikalności.
+    `insert into public.salon_hours (salon_id, weekday, open_time, close_time)
+     values ($1, $2, $3, $4)
+     on conflict (salon_id, weekday, open_time) do update set close_time = excluded.close_time`,
     [salonId, weekday, open, close],
   );
 }

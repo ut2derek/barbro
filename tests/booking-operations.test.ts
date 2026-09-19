@@ -221,6 +221,10 @@ describe('tworzenie wizyty', () => {
     await withRollback(async (db) => {
       const { salonId, staffId, clientId, serviceId } = await salonWithService(db);
 
+      // Nieudane zapytanie unieważnia całą transakcję, a chcemy w niej zostać
+      // i sprawdzić drugi przypadek — stąd punkt zapisu.
+      await db.query('savepoint przed_rezerwacja_web');
+
       // 07:00 — salon jeszcze zamknięty.
       await expect(
         createBooking(db, {
@@ -232,6 +236,8 @@ describe('tworzenie wizyty', () => {
           source: 'web',
         }),
       ).rejects.toMatchObject({ code: 'P0004' });
+
+      await db.query('rollback to savepoint przed_rezerwacja_web');
 
       // Barber może kogoś wcisnąć poza grafikiem.
       const manual = await createBooking(db, {

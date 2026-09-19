@@ -1,5 +1,5 @@
 import { Client } from 'pg';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   LOCAL_ANON_KEY,
@@ -43,6 +43,32 @@ async function futureSlot(): Promise<string> {
 }
 
 beforeEach(resetRateLimits);
+
+/**
+ * Część testów musi zapisać prawdziwą wizytę przez funkcję brzegową, więc nie
+ * da się ich zamknąć w transakcji. Bez tego sprzątania każde uruchomienie
+ * zostawiało w bazie kilku klientów i kilka wizyt: po tygodniu dane testowe
+ * przestawały przypominać salon, a zajęte terminy psuły kolejne testy.
+ */
+afterAll(async () => {
+  const db = new Client({ connectionString: CONNECTION_STRING });
+  await db.connect();
+
+  // Najpierw wizyty, potem kartoteki — odwrotna kolejność łamie klucz obcy.
+  await db.query(
+    `delete from public.bookings
+     where client_id in (
+       select id from public.clients
+       where email like 'wygasly-%@example.test' or email like 'bot-%@example.test'
+     )`,
+  );
+  await db.query(
+    `delete from public.clients
+     where email like 'wygasly-%@example.test' or email like 'bot-%@example.test'`,
+  );
+
+  await db.end();
+});
 
 describe('adres e-mail klienta nie jest wzorcem wyszukiwania', () => {
   /**
@@ -183,11 +209,6 @@ describe('limit zapytań chroni przed botami', () => {
     }
 
     expect(statuses).toContain(429);
-
-    const db = new Client({ connectionString: CONNECTION_STRING });
-    await db.connect();
-    await db.query("delete from public.clients where email like 'bot-%@example.test'");
-    await db.end();
   });
 
   it('przeglądanie oferty ma limit na tyle wysoki, że człowiek go nie dotknie', async () => {

@@ -395,7 +395,7 @@ describe('zmiana czasu letniego i zimowego', () => {
 
   it('9:00 rano znaczy 9:00 rano po obu stronach zmiany czasu', async () => {
     await withRollback(async (db) => {
-      const salonId = await createSalon(db, { horizon: 400 });
+      const salonId = await createSalon(db, { horizon: 365 });
       const staffId = await addStaff(db, salonId);
       const serviceId = await addService(db, salonId, { duration: 60 });
       await assignService(db, salonId, staffId, serviceId);
@@ -420,7 +420,7 @@ describe('zmiana czasu letniego i zimowego', () => {
 
   it('doba ze zmianą czasu ma komplet terminów', async () => {
     await withRollback(async (db) => {
-      const salonId = await createSalon(db, { horizon: 400 });
+      const salonId = await createSalon(db, { horizon: 365 });
       const staffId = await addStaff(db, salonId);
       const serviceId = await addService(db, salonId, { duration: 60 });
       await assignService(db, salonId, staffId, serviceId);

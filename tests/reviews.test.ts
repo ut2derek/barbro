@@ -1,7 +1,17 @@
 import { Client } from 'pg';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { LOCAL_ANON_KEY, LOCAL_API_URL, SALONS, USERS, withRollback } from './helpers/db';
+import {
+  BOOKINGS,
+  CLIENTS,
+  LOCAL_ANON_KEY,
+  LOCAL_API_URL,
+  SALONS,
+  STAFF,
+  USERS,
+  resetRateLimits,
+  withRollback,
+} from './helpers/db';
 
 /**
  * Opinie klientów (publiczne) i ocena klienta przez salon (wewnętrzna).
@@ -15,13 +25,34 @@ const CONNECTION_STRING =
 
 const createdReviews: string[] = [];
 
+/**
+ * Wizyty z danych testowych, którym test doczepił link do zarządzania.
+ * Link trzeba zdjąć, inaczej kolejne uruchomienie odbija się o unikalność
+ * skrótu tokenu — i test wywala się na czymś, co nie ma z nim nic wspólnego.
+ */
+const borrowedLinks: string[] = [];
+
 afterEach(async () => {
-  if (createdReviews.length === 0) return;
+  if (createdReviews.length === 0 && borrowedLinks.length === 0) return;
+
   const db = new Client({ connectionString: CONNECTION_STRING });
   await db.connect();
-  await db.query('delete from public.booking_reviews where booking_id = any($1::uuid[])', [
-    createdReviews.splice(0),
-  ]);
+
+  if (createdReviews.length > 0) {
+    await db.query('delete from public.booking_reviews where booking_id = any($1::uuid[])', [
+      createdReviews.splice(0),
+    ]);
+  }
+
+  if (borrowedLinks.length > 0) {
+    await db.query(
+      `update public.bookings
+       set manage_token_hash = null, manage_token_expires_at = null
+       where id = any($1::uuid[])`,
+      [borrowedLinks.splice(0)],
+    );
+  }
+
   await db.end();
 });
 
@@ -33,11 +64,25 @@ function call(body: Record<string, unknown>): Promise<Response> {
   });
 }
 
+// Limit zapytań broni funkcję przed botami; testy biją w nią dziesiątki razy
+// z jednego adresu, więc zerujemy licznik przed każdym.
+beforeEach(resetRateLimits);
+
 describe('opinia klienta', () => {
   it('nie da się wystawić opinii do wizyty, która się nie odbyła', async () => {
     await withRollback(async (db) => {
+      // Wizytę zakładamy w transakcji, zamiast szukać potwierdzonej w danych
+      // testowych: `mark_past_bookings_completed` zamyka te z dzisiaj, więc
+      // po południu żadnej potwierdzonej już tam nie ma.
       const { rows } = await db.query(
-        `select id from public.bookings where status = 'confirmed' limit 1`,
+        `insert into public.bookings
+           (salon_id, staff_id, client_id, starts_at, ends_at, status, total_price_grosz, source)
+         values ($1, $2, $3,
+                 now() + interval '30 days',
+                 now() + interval '30 days' + interval '45 minutes',
+                 'confirmed', 8000, 'manual')
+         returning id`,
+        [SALONS.main, STAFF.marek, CLIENTS.jan],
       );
 
       await expect(
@@ -53,8 +98,8 @@ describe('opinia klienta', () => {
   it('opinia bierze salon, fryzjera i klienta z wizyty, a nie z tego, co przysłano', async () => {
     await withRollback(async (db) => {
       const { rows: booking } = await db.query(
-        `select id, salon_id, staff_id, client_id from public.bookings
-         where status = 'completed' limit 1`,
+        'select id, salon_id, staff_id, client_id from public.bookings where id = $1',
+        [BOOKINGS.completed],
       );
 
       await db.query(
@@ -78,7 +123,8 @@ describe('opinia klienta', () => {
   it('ocena spoza zakresu 1–5 jest odrzucana', async () => {
     await withRollback(async (db) => {
       const { rows } = await db.query(
-        `select id from public.bookings where status = 'completed' limit 1`,
+        'select id from public.bookings where id = $1',
+        [BOOKINGS.completed],
       );
 
       await expect(
@@ -93,7 +139,8 @@ describe('opinia klienta', () => {
   it('salon odpowiada na opinię, ale nie zmienia oceny ani komentarza', async () => {
     await withRollback(async (db) => {
       const { rows: booking } = await db.query(
-        `select id from public.bookings where status = 'completed' limit 1`,
+        'select id from public.bookings where id = $1',
+        [BOOKINGS.completed],
       );
       const { rows: review } = await db.query(
         `insert into public.booking_reviews (salon_id, booking_id, rating, comment)
@@ -120,7 +167,8 @@ describe('opinia klienta', () => {
   it('obcy salon nie odpowie na cudzą opinię', async () => {
     await withRollback(async (db) => {
       const { rows: booking } = await db.query(
-        `select id from public.bookings where status = 'completed' limit 1`,
+        'select id from public.bookings where id = $1',
+        [BOOKINGS.completed],
       );
       const { rows: review } = await db.query(
         `insert into public.booking_reviews (salon_id, booking_id, rating) values ($1, $2, 5) returning id`,
@@ -138,7 +186,8 @@ describe('opinia klienta', () => {
   it('opinii nie da się usunąć przez aplikację', async () => {
     await withRollback(async (db) => {
       const { rows: booking } = await db.query(
-        `select id from public.bookings where status = 'completed' limit 1`,
+        'select id from public.bookings where id = $1',
+        [BOOKINGS.completed],
       );
       const { rows: review } = await db.query(
         `insert into public.booking_reviews (salon_id, booking_id, rating) values ($1, $2, 1) returning id`,
@@ -161,19 +210,31 @@ describe('opinia przez link klienta', () => {
     const db = new Client({ connectionString: CONNECTION_STRING });
     await db.connect();
 
-    const { rows } = await db.query(
-      `select id from public.bookings where status = 'completed' limit 1`,
-    );
-    const bookingId = rows[0].id;
+    // Konkretna wizyta z danych testowych, nie „pierwsza z brzegu": skrót
+    // tokenu jest unikalny, więc dwa uruchomienia nie mogą trafić w różne
+    // wizyty tym samym tokenem.
+    const bookingId = BOOKINGS.completed;
     createdReviews.push(bookingId);
+    borrowedLinks.push(bookingId);
 
-    const token = 'ocena'.repeat(10).slice(0, 48);
+    // Token to 24 bajty zapisane szesnastkowo — taki sam kształt, jaki
+    // generuje serwer, inaczej odbija się o walidację linku.
+    const token = 'a1b2c3d4'.repeat(6);
     const { createHash } = await import('node:crypto');
+    const hash = createHash('sha256').update(token).digest('hex');
+
+    // Pozostałość po przerwanym uruchomieniu — ten sam skrót nie może wisieć
+    // na dwóch wizytach naraz.
+    await db.query(
+      `update public.bookings set manage_token_hash = null, manage_token_expires_at = null
+       where manage_token_hash = $1`,
+      [hash],
+    );
     await db.query(
       `update public.bookings
        set manage_token_hash = $2, manage_token_expires_at = now() + interval '30 days'
        where id = $1`,
-      [bookingId, createHash('sha256').update(token).digest('hex')],
+      [bookingId, hash],
     );
     await db.end();
 
@@ -196,7 +257,8 @@ describe('opinia przez link klienta', () => {
   });
 
   it('bez ważnego linku nie da się ocenić', async () => {
-    const response = await call({ action: 'submitReview', token: 'zmyslony', rating: 5 });
+    // Kształt poprawny, tylko takiej wizyty nie ma — wtedy odpowiedzią jest 404.
+    const response = await call({ action: 'submitReview', token: 'f0e1d2c3'.repeat(6), rating: 5 });
     expect(response.status).toBe(404);
   });
 });

@@ -1,4 +1,7 @@
+import { describe, expect, it } from 'vitest';
 
+import { type Db, withRollback } from './helpers/db';
+import { addStaff, createSalon } from './helpers/scenario';
 describe('kolejka maili do klienta', () => {
   async function bookingFor(db: Db, status: string): Promise<string> {
     const salonId = await createSalon(db);
