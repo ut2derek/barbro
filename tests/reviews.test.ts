@@ -13,18 +13,6 @@ import { LOCAL_ANON_KEY, LOCAL_API_URL, SALONS, USERS, withRollback } from './he
 const CONNECTION_STRING =
   process.env.TEST_DATABASE_URL ?? 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
-const createdReviews: string[] = [];
-
-afterEach(async () => {
-  if (createdReviews.length === 0) return;
-  const db = new Client({ connectionString: CONNECTION_STRING });
-  await db.connect();
-  await db.query('delete from public.booking_reviews where booking_id = any($1::uuid[])', [
-    createdReviews.splice(0),
-  ]);
-  await db.end();
-});
-
 
 /**
  * Wizyta o znanym statusie, tworzona na potrzeby testu.
@@ -180,28 +168,52 @@ describe('opinia klienta', () => {
 });
 
 describe('opinia przez link klienta', () => {
+  /**
+   * Ten test zapisuje dane na stałe — funkcja serwerowa działa poza naszą
+   * transakcją — więc tworzy własną wizytę i sam po sobie sprząta.
+   */
+  const committed: { bookingId?: string; clientId?: string } = {};
+
+  afterEach(async () => {
+    if (!committed.bookingId) return;
+
+    const db = new Client({ connectionString: CONNECTION_STRING });
+    await db.connect();
+    await db.query('delete from public.bookings where id = $1', [committed.bookingId]);
+    await db.query('delete from public.clients where id = $1', [committed.clientId]);
+    await db.end();
+
+    committed.bookingId = undefined;
+    committed.clientId = undefined;
+  });
+
   it('klient ocenia wizytę swoim linkiem, drugi raz już nie', async () => {
+    const { createHash, randomBytes } = await import('node:crypto');
+    // Token losowy przy każdym uruchomieniu — stały zderzałby się z poprzednim.
+    const token = randomBytes(24).toString('hex');
+
     const db = new Client({ connectionString: CONNECTION_STRING });
     await db.connect();
 
-    const { rows } = await db.query(
-      `select id from public.bookings where status = 'completed' limit 1`,
+    const client = await db.query(
+      `insert into public.clients (salon_id, first_name, email, phone)
+       values ($1, 'Oceniający', 'ocena' || replace(gen_random_uuid()::text, '-', '') || '@test.test', '+48600100100')
+       returning id`,
+      [SALONS.main],
     );
-    const bookingId = rows[0].id;
-    createdReviews.push(bookingId);
+    committed.clientId = client.rows[0].id;
 
-    // Test musi startować z czystym stanem — wizyta mogła zostać oceniona
-    // w poprzednim uruchomieniu albo ręcznie.
-    await db.query('delete from public.booking_reviews where booking_id = $1', [bookingId]);
-
-    const token = 'ocena'.repeat(10).slice(0, 48);
-    const { createHash } = await import('node:crypto');
-    await db.query(
-      `update public.bookings
-       set manage_token_hash = $2, manage_token_expires_at = now() + interval '30 days'
-       where id = $1`,
-      [bookingId, createHash('sha256').update(token).digest('hex')],
+    const booking = await db.query(
+      `insert into public.bookings
+         (salon_id, staff_id, client_id, starts_at, ends_at, status, total_price_grosz, source,
+          manage_token_hash, manage_token_expires_at)
+       values ($1, '30000000-0000-0000-0000-000000000001', $2,
+               now() - interval '3 hours', now() - interval '2 hours',
+               'completed', 8000, 'web', $3, now() + interval '30 days')
+       returning id`,
+      [SALONS.main, committed.clientId, createHash('sha256').update(token).digest('hex')],
     );
+    committed.bookingId = booking.rows[0].id;
     await db.end();
 
     const first = await call({ action: 'submitReview', token, rating: 5, comment: 'Polecam' });
