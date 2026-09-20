@@ -61,7 +61,6 @@ const ENTRIES: Entry[] = [
   },
 ];
 
-/** Rzadziej używane działy. Codzienna praca dzieje się w pozostałych zakładkach. */
 /** Konta z danych testowych — tylko w trybie deweloperskim. */
 const TEST_ACCOUNTS = [
   { email: 'wlasciciel@barbro.test', labelKey: 'auth.testOwner' },
@@ -69,6 +68,44 @@ const TEST_ACCOUNTS = [
   { email: 'admin@barbro.test', labelKey: 'auth.testAdmin' },
 ] as const;
 
+/** Kafelek działu. Trzy miejsca używały tego samego bloku stylu. */
+function Tile({
+  label,
+  description,
+  onPress,
+  highlighted,
+}: {
+  label: string;
+  description: string;
+  onPress: () => void;
+  highlighted?: boolean;
+}) {
+  const theme = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="link"
+      onPress={onPress}
+      style={({ pressed }) => ({
+        minHeight: theme.minTouchTarget,
+        padding: theme.spacing.lg,
+        borderRadius: theme.radius.lg,
+        borderWidth: 1,
+        borderColor: highlighted ? theme.colors.borderStrong : theme.colors.border,
+        backgroundColor: highlighted ? theme.colors.accentMuted : theme.colors.surface,
+        gap: theme.spacing.xxs,
+        opacity: pressed ? 0.85 : 1,
+      })}
+    >
+      <Text variant="bodyStrong">{label}</Text>
+      <Text variant="small" tone="muted">
+        {description}
+      </Text>
+    </Pressable>
+  );
+}
+
+/** Rzadziej używane działy. Codzienna praca dzieje się w pozostałych zakładkach. */
 export default function MoreScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -97,48 +134,34 @@ export default function MoreScreen() {
         </View>
 
         {visible.map((entry) => (
-          <Pressable
+          <Tile
             key={entry.key}
-            accessibilityRole="link"
+            label={t(entry.label as 'more.services')}
+            description={t(entry.description as 'more.servicesDescription')}
             onPress={() => router.push(entry.href as '/(app)/services')}
-            style={({ pressed }) => ({
-              minHeight: theme.minTouchTarget,
-              padding: theme.spacing.lg,
-              borderRadius: theme.radius.lg,
-              borderWidth: 1,
-              borderColor: theme.colors.border,
-              backgroundColor: theme.colors.surface,
-              gap: theme.spacing.xxs,
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <Text variant="bodyStrong">{t(entry.label as 'more.services')}</Text>
-            <Text variant="small" tone="muted">
-              {t(entry.description as 'more.servicesDescription')}
-            </Text>
-          </Pressable>
+          />
         ))}
 
+        {/*
+          Podgląd tego, co zobaczy klient — ta sama strona rezerwacji, która
+          trafi jako moduł na stronę salonu. Nie wymaga logowania, więc
+          wchodzimy wprost pod adres salonu.
+        */}
+        {salon ? (
+          <Tile
+            label={t('more.clientPreview')}
+            description={t('more.clientPreviewDescription')}
+            onPress={() => router.push(`/rezerwacja/${salon.salonSlug}`)}
+          />
+        ) : null}
+
         {isAppAdmin ? (
-          <Pressable
-            accessibilityRole="link"
+          <Tile
+            label={t('admin.title')}
+            description={t('more.adminDescription')}
             onPress={() => router.push('/(app)/admin')}
-            style={({ pressed }) => ({
-              minHeight: theme.minTouchTarget,
-              padding: theme.spacing.lg,
-              borderRadius: theme.radius.lg,
-              borderWidth: 1,
-              borderColor: theme.colors.borderStrong,
-              backgroundColor: theme.colors.accentMuted,
-              gap: theme.spacing.xxs,
-              opacity: pressed ? 0.85 : 1,
-            })}
-          >
-            <Text variant="bodyStrong">{t('admin.title')}</Text>
-            <Text variant="small" tone="muted">
-              {t('more.adminDescription')}
-            </Text>
-          </Pressable>
+            highlighted
+          />
         ) : null}
 
         <Button label={t('account.signOut')} variant="secondary" onPress={() => void signOut()} />

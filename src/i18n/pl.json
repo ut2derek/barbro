@@ -286,6 +286,8 @@
     "account": "Moje konto",
     "accountDescription": "Wylogowanie i usunięcie konta.",
     "adminDescription": "Salony na platformie — widok właściciela produktu.",
+    "clientPreview": "Podgląd dla klienta",
+    "clientPreviewDescription": "Strona rezerwacji, którą zobaczy klient — moduł na stronę salonu.",
     "reviews": "Opinie",
     "reviewsDescription": "Oceny klientów i odpowiedzi salonu.",
     "schedule": "Grafik",
