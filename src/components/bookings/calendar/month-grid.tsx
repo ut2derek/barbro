@@ -100,15 +100,31 @@ export function MonthGrid({
                   </Text>
                 </View>
 
-                {bookings.length > 0 ? (
-                  <Text variant="small" tone={isSelected ? 'accent' : 'muted'}>
-                    {bookings.length}
-                  </Text>
-                ) : (
-                  <Text variant="small" tone="muted">
-                    {' '}
-                  </Text>
-                )}
+                {/* Liczba wizyt jako czerwone kółko — ten sam znak, co kropka
+                    na zakładce „Dziś”, więc oko czyta go tak samo w obu
+                    miejscach. Dni bez wizyt dostają pusty placeholder tej samej
+                    wysokości, żeby wiersze siatki nie skakały. */}
+                <View
+                  style={{
+                    minWidth: 18,
+                    height: 18,
+                    paddingHorizontal: 5,
+                    borderRadius: theme.radius.pill,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: bookings.length > 0 ? theme.colors.danger : 'transparent',
+                  }}
+                >
+                  {bookings.length > 0 ? (
+                    <Text
+                      variant="small"
+                      tone="onAccent"
+                      style={{ fontSize: 11, lineHeight: 14, fontWeight: '600' }}
+                    >
+                      {bookings.length}
+                    </Text>
+                  ) : null}
+                </View>
               </Pressable>
             );
           },
