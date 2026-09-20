@@ -1,9 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Switch, View } from 'react-native';
+import { Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { StaffAvatar } from '@/components/staff/staff-avatar';
+import { Chip } from '@/components/ui/chip';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
@@ -27,6 +29,9 @@ function toGrosz(value: string): number | null {
   return Math.round(Number(normalized) * 100);
 }
 
+/** Stopnie spotykane najczęściej; salon może wpisać własny. */
+const TITLE_SUGGESTIONS = ['Master', 'Barber', 'Stylista', 'Praktykant'];
+
 export default function TeamMemberScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -47,6 +52,7 @@ export default function TeamMemberScreen() {
   const existing = isNew ? undefined : team?.find((member) => member.id === id);
 
   const [displayName, setDisplayName] = useState('');
+  const [staffTitle, setStaffTitle] = useState('');
   const [bio, setBio] = useState('');
   const [active, setActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +62,7 @@ export default function TeamMemberScreen() {
   useRecordChange(existing?.id, () => {
     if (!existing) return;
     setDisplayName(existing.displayName);
+    setStaffTitle(existing.title ?? '');
     setBio(existing.bio ?? '');
     setActive(existing.active);
   });
@@ -95,6 +102,7 @@ export default function TeamMemberScreen() {
         salonId: salon!.salonId,
         id: isNew ? undefined : id,
         displayName,
+        title: staffTitle,
         bio,
         active,
         sortOrder: isNew ? (team?.length ?? 0) + 1 : undefined,
@@ -128,7 +136,47 @@ export default function TeamMemberScreen() {
     <Screen scroll>
       <Text variant="title">{isNew ? t('teamForm.newTitle') : t('teamForm.editTitle')}</Text>
 
+      {/* Podgląd kółka, które zobaczy klient. Bez zdjęcia pokazuje inicjały —
+          od razu widać, że puste miejsce to nie błąd. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+        <StaffAvatar
+          name={displayName || t('teamForm.name')}
+          photoUrl={existing?.photoUrl ?? null}
+          size={64}
+        />
+        <View style={{ flex: 1, gap: theme.spacing.xxs }}>
+          <Text variant="bodyStrong">{displayName || t('teamForm.newTitle')}</Text>
+          {staffTitle.trim() ? (
+            <Text variant="small" tone="secondary">
+              {staffTitle.trim()}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
       <Input label={t('teamForm.name')} value={displayName} onChangeText={setDisplayName} />
+
+      <Input
+        label={t('teamForm.title')}
+        value={staffTitle}
+        onChangeText={setStaffTitle}
+        placeholder={t('teamForm.titlePlaceholder')}
+        hint={t('teamForm.titleHint')}
+      />
+
+      {/* Skróty do najczęstszych stopni — wpisać własny nadal można. */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }}>
+        <View style={{ flexDirection: 'row', gap: theme.spacing.sm }}>
+          {TITLE_SUGGESTIONS.map((suggestion) => (
+            <Chip
+              key={suggestion}
+              label={suggestion}
+              selected={staffTitle.trim() === suggestion}
+              onPress={() => setStaffTitle(staffTitle.trim() === suggestion ? '' : suggestion)}
+            />
+          ))}
+        </View>
+      </ScrollView>
       <Input
         label={t('teamForm.bio')}
         value={bio}

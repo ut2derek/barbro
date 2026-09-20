@@ -1122,6 +1122,7 @@ export type Database = {
           photo_url: string | null
           salon_id: string
           sort_order: number
+          title: string | null
           updated_at: string
           user_id: string | null
         }
@@ -1134,6 +1135,7 @@ export type Database = {
           photo_url?: string | null
           salon_id: string
           sort_order?: number
+          title?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -1146,6 +1148,7 @@ export type Database = {
           photo_url?: string | null
           salon_id?: string
           sort_order?: number
+          title?: string | null
           updated_at?: string
           user_id?: string | null
         }

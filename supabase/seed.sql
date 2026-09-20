@@ -258,3 +258,8 @@ values
   ('70000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001',
    '50000000-0000-0000-0000-000000000001',
    'Tuszowanie siwizny', 'Delikatne przyciemnienie', 5000, 20, 1, 2);
+
+-- Stopnie fryzjerów — widoczne przy wyborze fryzjera i na liście zespołu.
+update public.staff set title = 'Master'      where id = '30000000-0000-0000-0000-000000000001';
+update public.staff set title = 'Barber'      where id = '30000000-0000-0000-0000-000000000002';
+update public.staff set title = 'Praktykantka' where id = '30000000-0000-0000-0000-000000000003';

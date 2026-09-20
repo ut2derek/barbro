@@ -527,7 +527,10 @@
     "saveOverride": "Zapisz odstępstwo",
     "screenTitle": "Pracownik",
     "servicesHint": "Puste pola oznaczają cenę i czas z cennika. Wypełnij tylko wtedy, gdy ten fryzjer ma inne.",
-    "servicesTitle": "Wykonywane usługi"
+    "servicesTitle": "Wykonywane usługi",
+    "title": "Stopień",
+    "titleHint": "Widoczny przy wyborze fryzjera. Zostaw puste, jeśli salon nie używa stopni.",
+    "titlePlaceholder": "np. Master"
   },
   "timeBlock": {
     "absenceRange": "Nieobecność: {from} – {to}",

@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 
+import { StaffAvatar } from '@/components/staff/staff-avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -44,9 +45,16 @@ export default function TeamScreen() {
                 gap: theme.spacing.sm,
               }}
             >
-              <Text variant="bodyStrong" style={{ flex: 1 }}>
-                {member.displayName}
-              </Text>
+              <StaffAvatar name={member.displayName} photoUrl={member.photoUrl} size={44} />
+
+              <View style={{ flex: 1, gap: theme.spacing.xxs }}>
+                <Text variant="bodyStrong">{member.displayName}</Text>
+                {member.title ? (
+                  <Text variant="small" tone="secondary">
+                    {member.title}
+                  </Text>
+                ) : null}
+              </View>
               <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
                 {member.role === 'owner' ? <Badge label={t('team.owner')} tone="neutral" /> : null}
                 {!member.active ? <Badge label={t('team.inactive')} tone="muted" /> : null}

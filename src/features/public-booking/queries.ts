@@ -42,6 +42,8 @@ export type PublicService = {
 export type PublicStaff = {
   id: string;
   name: string;
+  /** Stopień nadany przez salon: „Master”, „Barber”, „Praktykant”. */
+  title: string | null;
   bio: string | null;
   photoUrl: string | null;
   rating: number | null;

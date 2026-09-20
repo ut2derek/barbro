@@ -6,6 +6,9 @@ import { getSupabase } from '@/lib/supabase';
 export type TeamMember = {
   id: string;
   displayName: string;
+  /** Stopień nadany przez salon: „Master”, „Barber”, „Praktykant”. */
+  title: string | null;
+  photoUrl: string | null;
   bio: string | null;
   active: boolean;
   sortOrder: number;
@@ -34,7 +37,7 @@ export function useTeam(salonId: string | undefined) {
       const [staffResult, membersResult] = await Promise.all([
         supabase
           .from('staff')
-          .select('id, display_name, bio, active, sort_order, user_id')
+          .select('id, display_name, title, photo_url, bio, active, sort_order, user_id')
           .eq('salon_id', salonId!)
           .order('sort_order'),
         supabase.from('salon_members').select('user_id, role').eq('salon_id', salonId!),
@@ -48,6 +51,8 @@ export function useTeam(salonId: string | undefined) {
       return staffResult.data.map((member) => ({
         id: member.id,
         displayName: member.display_name,
+        title: member.title,
+        photoUrl: member.photo_url,
         bio: member.bio,
         active: member.active,
         sortOrder: member.sort_order,
@@ -72,6 +77,7 @@ export function useSaveStaff() {
       salonId: string;
       id?: string;
       displayName: string;
+      title: string | null;
       bio: string | null;
       active: boolean;
       sortOrder?: number;
@@ -80,6 +86,7 @@ export function useSaveStaff() {
       const payload = {
         salon_id: args.salonId,
         display_name: args.displayName.trim(),
+        title: args.title?.trim() || null,
         bio: args.bio?.trim() || null,
         active: args.active,
         ...(args.sortOrder !== undefined ? { sort_order: args.sortOrder } : {}),

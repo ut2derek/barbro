@@ -59,7 +59,7 @@ export async function catalog(body: RequestOf<'catalog'>): Promise<Response> {
       admin.rpc('service_pricing', { p_salon_id: salon.id }),
       admin
         .from('staff')
-        .select('id, display_name, bio, photo_url, sort_order')
+        .select('id, display_name, title, bio, photo_url, sort_order')
         .eq('salon_id', salon.id)
         .eq('active', true)
         .order('sort_order'),
@@ -134,6 +134,7 @@ export async function catalog(body: RequestOf<'catalog'>): Promise<Response> {
     staff: staff.data!.map((member) => ({
       id: member.id,
       name: member.display_name,
+      title: member.title,
       bio: member.bio,
       photoUrl: member.photo_url,
       rating: ratingOf.get(member.id)?.average ?? null,
