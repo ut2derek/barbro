@@ -8,16 +8,20 @@ import { t } from '@/i18n';
 import { formatDuration, formatPrice } from '@/lib/format';
 import { useTheme } from '@/theme';
 
-/** Jedna usługa na liście: zaznaczenie do koszyka albo „Umów" wprost. */
+/**
+ * Jedna usługa na liście. Cała karta i przycisk robią to samo: wybierają tę
+ * usługę i prowadzą dalej.
+ *
+ * Wcześniej dotknięcie karty po cichu dodawało usługę do koszyka, a przycisk
+ * „Umów" ten koszyk kasował i rezerwował tylko ją — dwa różne zachowania w
+ * jednym kafelku, nie do odgadnięcia. Dobieranie kilku usług wróci osobnym
+ * oknem po wybraniu pierwszej.
+ */
 export function ServiceRow({
   service,
-  selected,
-  onToggle,
   onBook,
 }: {
   service: PublicService;
-  selected: boolean;
-  onToggle: () => void;
   onBook: () => void;
 }) {
   const theme = useTheme();
@@ -28,16 +32,15 @@ export function ServiceRow({
         padding: theme.spacing.lg,
         borderRadius: theme.radius.lg,
         borderWidth: 1,
-        borderColor: selected ? theme.colors.accent : theme.colors.border,
-        backgroundColor: selected ? theme.colors.accentMuted : theme.colors.surface,
+        borderColor: theme.colors.border,
+        backgroundColor: theme.colors.surface,
         gap: theme.spacing.sm,
       }}
     >
       <Pressable
-        accessibilityRole="checkbox"
-        accessibilityState={{ checked: selected }}
-        accessibilityLabel={t('publicBooking.toggleService', { name: service.name })}
-        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityLabel={t('publicBooking.pickService', { name: service.name })}
+        onPress={onBook}
         style={{ gap: theme.spacing.xxs }}
       >
         <View

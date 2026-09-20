@@ -1340,6 +1340,7 @@ export type Database = {
           id: string | null
           last_name: string | null
           last_visit_at: string | null
+          next_visit_at: string | null
           no_show_count: number | null
           phone: string | null
           salon_id: string | null

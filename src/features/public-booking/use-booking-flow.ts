@@ -41,6 +41,7 @@ export function usePublicBookingFlow(slug: string | undefined) {
 
   const [step, setStep] = useState<Step>('services');
   const [serviceIds, setServiceIds] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [chosenAddons, setChosenAddons] = useState<ChosenAddons>({});
   const [addonsOpen, setAddonsOpen] = useState(false);
   const [staffId, setStaffId] = useState<string | null>(null);
@@ -50,6 +51,26 @@ export function usePublicBookingFlow(slug: string | undefined) {
   const [form, setForm] = useState<BookingForm>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<PublicBookingResult | null>(null);
+
+  /** Kategorie w kolejności ustawionej przez salon — do pigułek nad listą. */
+  const categories = useMemo(() => {
+    const names: string[] = [];
+    for (const service of catalog.data?.services ?? []) {
+      if (service.categoryName && !names.includes(service.categoryName)) {
+        names.push(service.categoryName);
+      }
+    }
+    return names;
+  }, [catalog.data]);
+
+  /** Lista po odfiltrowaniu pigułką. */
+  const visibleServices = useMemo(
+    () =>
+      (catalog.data?.services ?? []).filter(
+        (service) => categoryFilter === null || service.categoryName === categoryFilter,
+      ),
+    [catalog.data, categoryFilter],
+  );
 
   const chosenServices = useMemo(
     () => (catalog.data?.services ?? []).filter((service) => serviceIds.includes(service.id)),
@@ -151,6 +172,7 @@ export function usePublicBookingFlow(slug: string | undefined) {
     setChosenAddons({});
     setPendingSlot(null);
     setStep('services');
+    setCategoryFilter(null);
     setForm(EMPTY_FORM);
     setFormError(null);
   }
@@ -187,6 +209,10 @@ export function usePublicBookingFlow(slug: string | undefined) {
     step,
     setStep,
     serviceIds,
+    categories,
+    categoryFilter,
+    setCategoryFilter,
+    visibleServices,
     chosenServices,
     relevantAddons,
     chosenAddons,

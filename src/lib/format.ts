@@ -24,6 +24,22 @@ export function formatFullDate(iso: string, zone: string): string {
     .toLocaleString({ weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+/**
+ * Data w kilku znakach („21 wrz”), do plakietek i kafelków. Rok dopisujemy
+ * tylko wtedy, gdy jest inny niż bieżący — inaczej zabierałby miejsce,
+ * nie wnosząc nic.
+ */
+export function formatCompactDate(iso: string, zone: string): string {
+  const date = DateTime.fromISO(iso, { zone }).setLocale('pl');
+  const sameYear = date.year === DateTime.now().setZone(zone).year;
+
+  return date.toLocaleString(
+    sameYear
+      ? { day: 'numeric', month: 'short' }
+      : { day: 'numeric', month: 'short', year: 'numeric' },
+  );
+}
+
 export function formatShortDate(date: DateTime): string {
   return date.setLocale('pl').toLocaleString({ day: 'numeric', month: 'short' });
 }

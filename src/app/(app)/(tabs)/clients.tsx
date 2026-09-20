@@ -1,10 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Badge } from '@/components/ui/badge';
+import { ClientRow } from '@/components/clients/client-row';
 import { Card } from '@/components/ui/card';
 import { Chip } from '@/components/ui/chip';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,6 @@ import { useClientSearch, type ClientSort } from '@/features/clients/queries';
 import { useCurrentSalon } from '@/features/salon/use-current-salon';
 import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import { t } from '@/i18n';
-import { formatFullDate } from '@/lib/format';
 import { useTheme } from '@/theme';
 
 /**
@@ -101,49 +100,12 @@ export default function ClientsScreen() {
           </Card>
         ) : (
           (clients ?? []).map((client) => (
-            <Pressable
+            <ClientRow
               key={client.id}
-              accessibilityRole="button"
-              onPress={() => router.push(`/(app)/clients/${client.id}`)}
-              style={({ pressed }) => ({
-                minHeight: theme.minTouchTarget,
-                padding: theme.spacing.lg,
-                borderRadius: theme.radius.lg,
-                borderWidth: 1,
-                borderColor: theme.colors.border,
-                backgroundColor: theme.colors.surface,
-                gap: theme.spacing.xxs,
-                opacity: pressed ? 0.85 : 1,
-              })}
-            >
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  gap: theme.spacing.sm,
-                }}
-              >
-                <Text variant="bodyStrong" style={{ flex: 1 }}>
-                  {client.name}
-                </Text>
-                {client.blocked ? <Badge label={t('clients.blocked')} tone="danger" /> : null}
-                {client.noShowCount > 0 ? (
-                  <Badge
-                    label={t('clients.noShows', { count: client.noShowCount })}
-                    tone="warning"
-                  />
-                ) : null}
-              </View>
-              <Text variant="small" tone="muted">
-                {client.phone}
-              </Text>
-              <Text variant="small" tone="muted">
-                {client.lastVisitAt
-                  ? t('clients.lastVisit', { date: formatFullDate(client.lastVisitAt, zone) })
-                  : t('clients.neverVisited')}
-              </Text>
-            </Pressable>
+              client={client}
+              zone={zone}
+              onOpen={() => router.push(`/(app)/clients/${client.id}`)}
+            />
           ))
         )}
       </ScrollView>

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 
 import { AddonsSheet } from '@/components/public/addons-sheet';
 import { SalonHeader } from '@/components/public/salon-header';
+import { CategoryPills } from '@/components/public/steps/category-pills';
 import { BookingDisabledCard, ServiceRow } from '@/components/public/steps/services-step';
 import { ReviewsSection } from '@/components/public/steps/reviews-section';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,6 @@ import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import type { BookingFlow } from '@/features/public-booking/use-booking-flow';
 import { t } from '@/i18n';
-import { formatPrice } from '@/lib/format';
 
 /** Krok 1: salon, jego usługi i opinie. */
 export function ServicesScreen({ flow }: { flow: BookingFlow }) {
@@ -38,25 +38,19 @@ export function ServicesScreen({ flow }: { flow: BookingFlow }) {
               {t('publicBooking.servicesHint')}
             </Text>
 
-            {flow.catalog.data!.services.map((service) => (
+            <CategoryPills
+              categories={flow.categories}
+              selected={flow.categoryFilter}
+              onSelect={flow.setCategoryFilter}
+            />
+
+            {flow.visibleServices.map((service) => (
               <ServiceRow
                 key={service.id}
                 service={service}
-                selected={flow.serviceIds.includes(service.id)}
-                onToggle={() => flow.toggleService(service.id)}
                 onBook={() => flow.chooseService(service.id)}
               />
             ))}
-
-            {flow.serviceIds.length > 1 ? (
-              <Button
-                label={t('publicBooking.continueWithChosen', {
-                  count: `${flow.serviceIds.length}`,
-                  price: formatPrice(flow.totalPrice),
-                })}
-                onPress={() => flow.setStep('term')}
-              />
-            ) : null}
           </>
         )}
 

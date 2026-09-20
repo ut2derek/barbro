@@ -14,10 +14,12 @@ export type ClientOption = {
   blocked: boolean;
 };
 
-/** Pozycja listy klientów — to samo co wyżej plus data ostatniej wizyty. */
+/** Pozycja listy klientów — to samo co wyżej plus daty wizyt. */
 export type ClientListItem = ClientOption & {
-  /** Puste = klient nie ma jeszcze żadnej wizyty. */
+  /** Ostatnia odbyta wizyta. Puste = klient jeszcze u nas nie był. */
   lastVisitAt: string | null;
+  /** Najbliższa umówiona wizyta. Puste = nic nie ma w kalendarzu. */
+  nextVisitAt: string | null;
 };
 
 /**
@@ -74,7 +76,9 @@ export function useClientSearch(args: {
 
       let request = getSupabase()
         .from('client_overview')
-        .select('id, first_name, last_name, phone, email, no_show_count, blocked, last_visit_at')
+        .select(
+          'id, first_name, last_name, phone, email, no_show_count, blocked, last_visit_at, next_visit_at',
+        )
         .eq('salon_id', args.salonId!)
         // Klienci bez wizyt lądują na końcu przy obu porządkach „po wizytach” —
         // inaczej przy „najstarsze wizyty” puste wartości zajęłyby cały ekran.
@@ -99,6 +103,7 @@ export function useClientSearch(args: {
         noShowCount: client.no_show_count!,
         blocked: client.blocked!,
         lastVisitAt: client.last_visit_at,
+        nextVisitAt: client.next_visit_at,
       }));
     },
   });
