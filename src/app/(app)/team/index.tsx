@@ -23,7 +23,6 @@ export default function TeamScreen() {
       <Screen>
         <Text variant="title">{t('team.title')}</Text>
         <Text tone="secondary">{t('team.ownerOnly')}</Text>
-        <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
       </Screen>
     );
   }
@@ -75,12 +74,6 @@ export default function TeamScreen() {
       </Text>
 
       <Button label={t('team.add')} onPress={() => router.push('/(app)/team/new')} />
-
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-      />
     </Screen>
   );
 }

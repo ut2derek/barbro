@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import { ScrollView, View, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
@@ -15,13 +15,18 @@ type Props = {
    * Ekrany bez nagłówka (logowanie, strona rezerwacji) podają też „top”.
    */
   edges?: readonly Edge[];
+  /**
+   * Uchwyt do przewijania treści z ekranu — np. skok do sekcji po dotknięciu
+   * odnośnika. Działa tylko razem z `scroll`.
+   */
+  scrollRef?: RefObject<ScrollView | null>;
 };
 
 /** Maksymalna szerokość treści — na telefonie bez znaczenia, na dużym ekranie ratuje czytelność. */
 const MAX_CONTENT_WIDTH = 560;
 
 /** Bezpieczny obszar + tło ekranu. Każdy ekran zaczyna się od tego komponentu. */
-export function Screen({ children, scroll = false, style, edges = ['bottom'] }: Props) {
+export function Screen({ children, scroll = false, style, edges = ['bottom'], scrollRef }: Props) {
   const theme = useTheme();
 
   const content: ViewStyle = {
@@ -36,6 +41,7 @@ export function Screen({ children, scroll = false, style, edges = ['bottom'] }: 
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={edges}>
       {scroll ? (
         <ScrollView
+          ref={scrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={[{ flexGrow: 1 }, content, style]}
           keyboardShouldPersistTaps="handled"

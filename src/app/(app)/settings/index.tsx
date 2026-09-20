@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Switch, View } from 'react-native';
 
@@ -45,7 +44,6 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
 /** Ustawienia salonu — decydują, jak zachowa się rezerwacja online. */
 export default function SettingsScreen() {
   const theme = useTheme();
-  const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: settings } = useSalonSettings(salon?.salonId);
   const update = useUpdateSalonSettings();
@@ -146,7 +144,6 @@ export default function SettingsScreen() {
       <Screen>
         <Text variant="title">{t('settings.title')}</Text>
         <Text tone="secondary">{t('settings.ownerOnly')}</Text>
-        <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
       </Screen>
     );
   }
@@ -272,12 +269,6 @@ export default function SettingsScreen() {
       {saved ? <Text tone="success">{t('settings.saved')}</Text> : null}
 
       <Button label={t('common.save')} loading={update.isPending} onPress={() => void save()} />
-
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-      />
     </Screen>
   );
 }

@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -30,7 +29,6 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export default function ExceptionsScreen() {
   const zone = useSalonTimezone();
   const theme = useTheme();
-  const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: staff } = useSalonStaff(salon?.salonId);
   const { data: exceptions } = useScheduleExceptions(salon?.salonId);
@@ -232,12 +230,6 @@ export default function ExceptionsScreen() {
 
         <Button label={t('exceptions.add')} loading={addException.isPending} onPress={() => void save()} />
       </Card>
-
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/schedule'))}
-      />
 
       <DateRangeSheet
         // Klucz sprawia, że kalendarz otwiera się na już wybranym zakresie.

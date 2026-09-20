@@ -81,8 +81,6 @@ export default function AccountScreen() {
           onPress={handleDelete}
         />
       </Card>
-
-      <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
     </Screen>
   );
 }

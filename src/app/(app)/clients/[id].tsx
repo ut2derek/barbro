@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Linking, Switch, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Linking, Pressable, ScrollView, Switch, View } from 'react-native';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,34 @@ export default function ClientScreen() {
   const [note, setNote] = useSyncedForm(client, client?.id, (c) => c.internalNote ?? '', '');
   const [noteSaved, setNoteSaved] = useState(false);
 
+  // Historia siedzi na samym dole karty klienta, za notatką i ustawieniami.
+  // Kafelek „Wizyty" jest do niej skrótem, żeby barber nie przewijał w ciemno.
+  //
+  // Pozycję mierzymy dopiero przy dotknięciu, a nie przez `onLayout` przy
+  // rysowaniu: na webie to zdarzenie potrafi nie przyjść i odnośnik cicho
+  // przestaje działać. Gdyby pomiar zawiódł, zjeżdżamy na sam dół — historia
+  // i tak jest ostatnią sekcją.
+  const scrollRef = useRef<ScrollView>(null);
+  const historyRef = useRef<View>(null);
+
+  function showHistory() {
+    const scroller = scrollRef.current;
+    if (!scroller) return;
+
+    const toEnd = () => scroller.scrollToEnd({ animated: true });
+
+    if (!historyRef.current) {
+      toEnd();
+      return;
+    }
+
+    historyRef.current.measureLayout(
+      scroller.getScrollableNode(),
+      (_x, y) => scroller.scrollTo({ y: Math.max(y - 16, 0), animated: true }),
+      toEnd,
+    );
+  }
+
   if (isPending || !client) {
     return (
       <Screen>
@@ -45,7 +73,7 @@ export default function ClientScreen() {
   const spent = completed.reduce((sum, booking) => sum + booking.totalPriceGrosz, 0);
 
   return (
-    <Screen scroll>
+    <Screen scroll scrollRef={scrollRef}>
       <View style={{ gap: theme.spacing.xs }}>
         <Text variant="title">{client.name}</Text>
         <View style={{ flexDirection: 'row', gap: theme.spacing.xs }}>
@@ -75,12 +103,22 @@ export default function ClientScreen() {
       </Card>
 
       <View style={{ flexDirection: 'row', gap: theme.spacing.md }}>
-        <Card style={{ flex: 1 }}>
-          <Text variant="label" tone="secondary">
-            {t('clients.visitsDone')}
-          </Text>
-          <Text variant="title">{completed.length}</Text>
-        </Card>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('clients.goToHistory')}
+          style={{ flex: 1 }}
+          onPress={showHistory}
+        >
+          <Card>
+            <Text variant="label" tone="secondary">
+              {t('clients.visitsDone')}
+            </Text>
+            <Text variant="title">{completed.length}</Text>
+            <Text variant="small" tone="accent">
+              {t('clients.goToHistory')}
+            </Text>
+          </Card>
+        </Pressable>
         <Card style={{ flex: 1 }}>
           <Text variant="label" tone="secondary">
             {t('clients.totalSpent')}
@@ -137,7 +175,9 @@ export default function ClientScreen() {
         </Text>
       </Card>
 
-      <Text variant="heading">{t('clients.history')}</Text>
+      <View ref={historyRef}>
+        <Text variant="heading">{t('clients.history')}</Text>
+      </View>
 
       {(bookings ?? []).length === 0 ? (
         <Text tone="muted">{t('clients.noHistory')}</Text>
@@ -161,12 +201,6 @@ export default function ClientScreen() {
           </Card>
         ))
       )}
-
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)/clients'))}
-      />
     </Screen>
   );
 }

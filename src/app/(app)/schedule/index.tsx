@@ -253,12 +253,6 @@ export default function ScheduleScreen() {
         label={t('exceptions.title')}
         onPress={() => router.push('/(app)/schedule/exceptions')}
       />
-
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-      />
     </Screen>
   );
 }

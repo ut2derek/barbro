@@ -1,4 +1,6 @@
-import { Redirect, Stack } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Redirect, Stack, router } from 'expo-router';
+import { Pressable } from 'react-native';
 
 import { Loading } from '@/components/ui/loading';
 import { t } from '@/i18n';
@@ -21,7 +23,7 @@ export default function AppLayout() {
 
   return (
     <Stack
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         headerShown: true,
         headerStyle: { backgroundColor: theme.colors.surfaceElevated },
         headerTintColor: theme.colors.textPrimary,
@@ -30,7 +32,25 @@ export default function AppLayout() {
         // „Wstecz” zamiast nazwy poprzedniego ekranu — krótkie nazwy po polsku
         // i tak się nie mieszczą przy dłuższych tytułach.
         headerBackTitle: t('navigation.backShort'),
-      }}
+        // Powrót należy do paska u góry — tak działa każda aplikacja na iOS
+        // i tak działa gest przeciągnięcia od krawędzi.
+        //
+        // Gdy ekran otwarto wprost z adresu (na przykład linkiem w przeglądarce),
+        // stos jest pusty i systemowa strzałka się nie pokazuje. Wtedy dajemy
+        // własną, która wraca na ekran startowy — inaczej nie byłoby wyjścia.
+        headerLeft: navigation.canGoBack()
+          ? undefined
+          : () => (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('common.back')}
+                onPress={() => router.replace('/')}
+                style={{ paddingRight: theme.spacing.md, paddingVertical: theme.spacing.xs }}
+              >
+                <Ionicons name="chevron-back" size={24} color={theme.colors.textPrimary} />
+              </Pressable>
+            ),
+      })}
     >
       {/* Zakładki mają własne duże tytuły na ekranach. */}
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

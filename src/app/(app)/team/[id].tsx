@@ -254,12 +254,6 @@ export default function TeamMemberScreen() {
           ))}
         </>
       ) : null}
-
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/team'))}
-      />
     </Screen>
   );
 }

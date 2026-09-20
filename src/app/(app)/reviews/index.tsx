@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -22,7 +21,6 @@ import { useTheme } from '@/theme';
 export default function ReviewsScreen() {
   const zone = useSalonTimezone();
   const theme = useTheme();
-  const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: reviews, isPending } = useSalonReviews(salon?.salonId);
   const { data: rating } = useSalonRating(salon?.salonId);
@@ -122,12 +120,6 @@ export default function ReviewsScreen() {
           </Card>
         ))
       )}
-
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)/more'))}
-      />
     </Screen>
   );
 }

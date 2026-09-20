@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { DateTime } from 'luxon';
 import { useState } from 'react';
 import { ScrollView, View } from 'react-native';
@@ -30,7 +29,6 @@ const TIME_PATTERN = /^(\d{1,2}):(\d{2})$/;
 export default function TimeBlockScreen() {
   const zone = useSalonTimezone();
   const theme = useTheme();
-  const router = useRouter();
   const { data: salon } = useCurrentSalon();
   const { data: staff } = useSalonStaff(salon?.salonId);
 
@@ -235,12 +233,6 @@ export default function TimeBlockScreen() {
           ))}
         </View>
       ) : null}
-
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-      />
 
       <DateRangeSheet
         // Klucz sprawia, że kalendarz otwiera się na oglądanym dniu za każdym razem.

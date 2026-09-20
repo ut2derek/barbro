@@ -25,7 +25,6 @@ export default function AddonsScreen() {
       <Screen>
         <Text variant="title">{t('addonsAdmin.title')}</Text>
         <Text tone="secondary">{t('addonsAdmin.ownerOnly')}</Text>
-        <Button label={t('common.back')} variant="secondary" onPress={() => router.back()} />
       </Screen>
     );
   }
@@ -112,12 +111,6 @@ export default function AddonsScreen() {
       )}
 
       <Button label={t('addonsAdmin.add')} onPress={() => router.push('/(app)/addons/new')} />
-
-      <Button
-        label={t('common.back')}
-        variant="secondary"
-        onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)/services'))}
-      />
     </Screen>
   );
 }
