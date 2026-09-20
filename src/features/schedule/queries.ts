@@ -137,36 +137,47 @@ function useScheduleInvalidation() {
   return () => invalidateSchedule(queryClient);
 }
 
-export function useAddSalonHours() {
+/**
+ * Zapis całego dnia naraz: kasujemy stare okna i wstawiamy nowe.
+ *
+ * Ekran edytuje dzień jako całość, a nie pojedyncze okna — pusta lista okien
+ * znaczy „zamknięte", więc zamknięcie dnia to po prostu zapis bez okien.
+ */
+export function useSetSalonDayHours() {
   const invalidate = useScheduleInvalidation();
 
   return useMutation({
-    mutationFn: async (args: { salonId: string; weekday: number; from: string; to: string }) => {
-      const { error } = await getSupabase().from('salon_hours').insert({
-        salon_id: args.salonId,
-        weekday: args.weekday,
-        open_time: args.from,
-        close_time: args.to,
-      });
+    mutationFn: async (args: {
+      salonId: string;
+      weekday: number;
+      windows: { from: string; to: string }[];
+    }) => {
+      const supabase = getSupabase();
+
+      const { error: clearError } = await supabase
+        .from('salon_hours')
+        .delete()
+        .eq('salon_id', args.salonId)
+        .eq('weekday', args.weekday);
+      if (clearError) throw clearError;
+
+      if (args.windows.length === 0) return;
+
+      const { error } = await supabase.from('salon_hours').insert(
+        args.windows.map((window) => ({
+          salon_id: args.salonId,
+          weekday: args.weekday,
+          open_time: window.from,
+          close_time: window.to,
+        })),
+      );
       if (error) throw error;
     },
     onSuccess: invalidate,
   });
 }
 
-export function useRemoveSalonHours() {
-  const invalidate = useScheduleInvalidation();
-
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await getSupabase().from('salon_hours').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: invalidate,
-  });
-}
-
-export function useAddWorkingHours() {
+export function useSetWorkingDayHours() {
   const invalidate = useScheduleInvalidation();
 
   return useMutation({
@@ -174,28 +185,28 @@ export function useAddWorkingHours() {
       salonId: string;
       staffId: string;
       weekday: number;
-      from: string;
-      to: string;
+      windows: { from: string; to: string }[];
     }) => {
-      const { error } = await getSupabase().from('working_hours').insert({
-        salon_id: args.salonId,
-        staff_id: args.staffId,
-        weekday: args.weekday,
-        start_time: args.from,
-        end_time: args.to,
-      });
-      if (error) throw error;
-    },
-    onSuccess: invalidate,
-  });
-}
+      const supabase = getSupabase();
 
-export function useRemoveWorkingHours() {
-  const invalidate = useScheduleInvalidation();
+      const { error: clearError } = await supabase
+        .from('working_hours')
+        .delete()
+        .eq('staff_id', args.staffId)
+        .eq('weekday', args.weekday);
+      if (clearError) throw clearError;
 
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await getSupabase().from('working_hours').delete().eq('id', id);
+      if (args.windows.length === 0) return;
+
+      const { error } = await supabase.from('working_hours').insert(
+        args.windows.map((window) => ({
+          salon_id: args.salonId,
+          staff_id: args.staffId,
+          weekday: args.weekday,
+          start_time: window.from,
+          end_time: window.to,
+        })),
+      );
       if (error) throw error;
     },
     onSuccess: invalidate,
