@@ -1,20 +1,24 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import { Linking, Pressable, ScrollView, Switch, View } from 'react-native';
 
+import { BookingPhotos } from '@/components/bookings/booking-photos';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
+import { useBookingPhotos } from '@/features/bookings/photos';
 import { useClient, useClientBookings, useUpdateClient } from '@/features/clients/queries';
+import { useCurrentSalon, useMyStaffId } from '@/features/salon/use-current-salon';
 import { statusLabel, statusTone } from '@/features/bookings/status';
 import type { BookingStatus } from '@/features/bookings/queries';
 import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import { t } from '@/i18n';
+import { useAutosave } from '@/lib/use-autosave';
 import { useSyncedForm } from '@/lib/use-synced-form';
-import { formatFullDate, formatPrice, formatTimeRange } from '@/lib/format';
+import { formatDayAndTime, formatPrice } from '@/lib/format';
 import { useTheme } from '@/theme';
 
 /** Karta klienta: kontakt, notatka salonu i pełna historia wizyt. */
@@ -28,10 +32,27 @@ export default function ClientScreen() {
   const { data: bookings } = useClientBookings(id);
   const updateClient = useUpdateClient();
 
+  const { data: salon } = useCurrentSalon();
+  const { data: myStaffId } = useMyStaffId();
+
+  // Zdjęcia całej historii jednym zapytaniem — patrz `useBookingPhotos`.
+  const { data: photos, isPending: photosPending } = useBookingPhotos(
+    (bookings ?? []).map((booking) => booking.id),
+  );
+
+  /** Właściciel prowadzi każdą wizytę, pracownik tylko swoje. */
+  function mogeZmieniac(staffId: string | null): boolean {
+    return salon?.role === 'owner' || (staffId !== null && staffId === myStaffId);
+  }
+
   // Notatka wypełnia się danymi klienta, ale odświeżenie listy nie kasuje
   // tego, co barber właśnie pisze.
   const [note, setNote] = useSyncedForm(client, client?.id, (c) => c.internalNote ?? '', '');
-  const [noteSaved, setNoteSaved] = useState(false);
+  const noteStatus = useAutosave({
+    value: note,
+    saved: client?.internalNote ?? '',
+    save: (internalNote) => updateClient.mutateAsync({ clientId: id, internalNote }),
+  });
 
   // Historia siedzi na samym dole karty klienta, za notatką i ustawieniami.
   // Kafelek „Wizyty" jest do niej skrótem, żeby barber nie przewijał w ciemno.
@@ -135,24 +156,32 @@ export default function ClientScreen() {
         <Input
           label={t('clients.note')}
           value={note}
-          onChangeText={(value) => {
-            setNote(value);
-            setNoteSaved(false);
-          }}
+          onChangeText={setNote}
           multiline
           numberOfLines={3}
           placeholder={t('clients.notePlaceholder')}
         />
-        {noteSaved ? <Text tone="success" variant="small">{t('settings.saved')}</Text> : null}
-        <Button
-          label={t('common.save')}
-          variant="secondary"
-          loading={updateClient.isPending}
-          onPress={async () => {
-            await updateClient.mutateAsync({ clientId: id, internalNote: note });
-            setNoteSaved(true);
-          }}
-        />
+
+        {/* Jedna linijka, która zawsze mówi, co się dzieje z tekstem — bez niej
+            autozapis byłby niewidoczny i barber nie wiedziałby, czy notatka
+            jest już bezpieczna. */}
+        {noteStatus === 'saving' || noteStatus === 'pending' ? (
+          <Text variant="small" tone="muted">
+            {t('clients.noteSaving')}
+          </Text>
+        ) : noteStatus === 'saved' ? (
+          <Text variant="small" tone="success">
+            {t('clients.noteSaved')}
+          </Text>
+        ) : noteStatus === 'error' ? (
+          <Text variant="small" tone="danger">
+            {t('clients.noteError')}
+          </Text>
+        ) : (
+          <Text variant="small" tone="muted">
+            {t('clients.noteAutosave')}
+          </Text>
+        )}
       </Card>
 
       <Card>
@@ -185,19 +214,32 @@ export default function ClientScreen() {
         (bookings ?? []).map((booking) => (
           <Card key={booking.id}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text variant="bodyStrong">{formatFullDate(booking.startsAt, zone)}</Text>
+              <Text variant="bodyStrong" style={{ flex: 1 }}>
+                {formatDayAndTime(booking.startsAt, booking.endsAt, zone).day}{' '}
+                <Text variant="body" tone="secondary">
+                  {formatDayAndTime(booking.startsAt, booking.endsAt, zone).time}
+                </Text>
+              </Text>
               <Badge
                 label={statusLabel(booking.status as BookingStatus)}
                 tone={statusTone(booking.status as BookingStatus)}
               />
             </View>
             <Text tone="secondary" variant="small">
-              {formatTimeRange(booking.startsAt, booking.endsAt, zone)} · {booking.staffName}
+              {booking.staffName}
             </Text>
             <Text variant="small">{booking.services.join(' + ')}</Text>
             <Text variant="small" tone="secondary">
               {formatPrice(booking.totalPriceGrosz)}
             </Text>
+
+            <BookingPhotos
+              bookingId={booking.id}
+              salonId={salon?.salonId}
+              photos={photos?.[booking.id] ?? []}
+              loading={photosPending}
+              canEdit={mogeZmieniac(booking.staffId)}
+            />
           </Card>
         ))
       )}

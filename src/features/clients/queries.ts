@@ -50,6 +50,8 @@ export type ClientBooking = {
   endsAt: string;
   status: string;
   totalPriceGrosz: number;
+  /** Kto prowadził wizytę — po tym poznajemy, czy wolno przy niej coś zmieniać. */
+  staffId: string | null;
   staffName: string;
   services: string[];
 };
@@ -150,7 +152,7 @@ export function useClientBookings(clientId: string | undefined) {
       const { data, error } = await getSupabase()
         .from('bookings')
         .select(
-          'id, starts_at, ends_at, status, total_price_grosz, staff ( display_name ), booking_items ( name_snapshot, item_order )',
+          'id, starts_at, ends_at, status, total_price_grosz, staff_id, staff ( display_name ), booking_items ( name_snapshot, item_order )',
         )
         .eq('client_id', clientId!)
         .order('starts_at', { ascending: false })
@@ -164,6 +166,7 @@ export function useClientBookings(clientId: string | undefined) {
         endsAt: row.ends_at,
         status: row.status,
         totalPriceGrosz: row.total_price_grosz,
+        staffId: row.staff_id,
         staffName: row.staff?.display_name ?? '',
         services: [...row.booking_items]
           .sort((a, b) => a.item_order - b.item_order)

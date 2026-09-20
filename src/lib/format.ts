@@ -40,6 +40,32 @@ export function formatCompactDate(iso: string, zone: string): string {
   );
 }
 
+/**
+ * Dzień i godzina wizyty rozbite na części: „20 września, Niedziela.” i
+ * „10:00–10:45”. Osobno, bo nie mają tej samej wagi — dzień niesie treść
+ * i jest wyróżniony, godzina to szczegół i zostaje przygaszona.
+ *
+ * Data zaczyna się od liczby, bo tego szuka wzrok przy przeglądaniu historii;
+ * dzień tygodnia idzie po przecinku, wielką literą, żeby odcinał się od cyfr.
+ *
+ * Kropka, nie kropka środkowa: data ma już w sobie przecinek, więc trzeci
+ * znak rozdzielający robiłby z tego wyliczankę.
+ */
+export function formatDayAndTime(
+  fromIso: string,
+  toIso: string,
+  zone: string,
+): { day: string; time: string } {
+  const date = DateTime.fromISO(fromIso, { zone }).setLocale('pl');
+  const dayMonth = date.toLocaleString({ day: 'numeric', month: 'long' });
+  const weekday = date.toFormat('cccc');
+
+  return {
+    day: `${dayMonth}, ${weekday.charAt(0).toUpperCase()}${weekday.slice(1)}.`,
+    time: formatTimeRange(fromIso, toIso, zone),
+  };
+}
+
 export function formatShortDate(date: DateTime): string {
   return date.setLocale('pl').toLocaleString({ day: 'numeric', month: 'short' });
 }

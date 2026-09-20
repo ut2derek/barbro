@@ -150,6 +150,13 @@ i czasem zapisanymi w momencie rezerwacji (tak samo jak przy usługach).
 
 **`booking_status_history`** — kto, kiedy, ze statusu na status, komentarz.
 
+**`booking_photos`** — zdjęcia przypięte do wizyty: `salon_id`, `booking_id`,
+`storage_path`, `created_by`. Pliki leżą w prywatnym koszyku `booking-photos`
+pod ścieżką `<salon_id>/<booking_id>/<nazwa>` — pierwszy człon decyduje
+o dostępie. Dodaje i kasuje właściciel albo fryzjer prowadzący tę wizytę,
+ogląda cały zespół salonu; **klient nie widzi ich nigdzie**. Plik kasuje
+aplikacja przez Storage API, bo baza kasować w `storage.objects` nie może.
+
 ### Opinie
 
 **`booking_reviews`** — ocena 1–5 i komentarz wystawiane przez klienta
@@ -241,15 +248,18 @@ z komentarzem), `rescheduled` (stary termin po przełożeniu), `expired`
     według szablonu salonu. Do Google wysyłamy minimum danych.
 12. **Dodatki wydłużają wizytę.** Czas i cenę dodatku bierzemy **z bazy**, nigdy
     z tego, co przysłał klient — inaczej dałoby się kupić godzinę pracy za złotówkę.
-13. **Opinię wystawia się tylko do wizyty zrealizowanej**, raz, z linku w mailu.
+13. **Zdjęcia przy wizycie są wewnętrzne.** Widzi je zespół salonu, nigdy
+    klient. Adres do wyświetlenia jest podpisany i wygasa po godzinie, więc
+    przesłany dalej przestaje działać.
+14. **Opinię wystawia się tylko do wizyty zrealizowanej**, raz, z linku w mailu.
     Salon odpowiada, ale nie zmienia i nie usuwa oceny.
-14. **Funkcje publiczne mają limit zapytań** po adresie IP (`rate_limit_take`).
+15. **Funkcje publiczne mają limit zapytań** po adresie IP (`rate_limit_take`).
     Bez niego dało się w pętli tworzyć niepotwierdzone rezerwacje i blokować
     realne terminy po 20 minut każdy.
-15. **Link z maila ma datę ważności i jest sprawdzany przy każdej operacji** —
+16. **Link z maila ma datę ważności i jest sprawdzany przy każdej operacji** —
     podglądzie, potwierdzeniu, odwołaniu i wystawieniu opinii. Sprawdzenie
     siedzi w jednym miejscu (`bookingByToken`), żeby nie dało się go pominąć.
-16. **Czas i waluta:** daty w UTC, wyświetlanie w strefie salonu, poprawna
+17. **Czas i waluta:** daty w UTC, wyświetlanie w strefie salonu, poprawna
     obsługa zmiany czasu letniego i zimowego. Waluta PLN, zegar 24-godzinny,
     interfejs po polsku, teksty w plikach tłumaczeń (i18n) z myślą o przyszłości.
 

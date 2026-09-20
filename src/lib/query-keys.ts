@@ -25,6 +25,7 @@ export const queryKeys = {
   bookingsWeek: (salonId: string | undefined, fromKey: string, days: number, staffId: string) =>
     ['bookings-week', salonId, fromKey, days, staffId] as const,
   booking: (bookingId: string | undefined) => ['booking', bookingId] as const,
+  bookingPhotos: (bookingIdsKey: string) => ['booking-photos', bookingIdsKey] as const,
   pendingApprovalCount: (salonId: string | undefined) => ['pending-approval-count', salonId] as const,
   slots: (salonId: string | undefined, dayKey: string, staffId: string, serviceIds: string) =>
     ['slots', salonId, dayKey, staffId, serviceIds] as const,
@@ -78,6 +79,7 @@ const prefix = {
   bookingsDay: ['bookings'],
   bookingsWeek: ['bookings-week'],
   booking: ['booking'],
+  bookingPhotos: ['booking-photos'],
   pendingApprovalCount: ['pending-approval-count'],
   slots: ['slots'],
   publicSlots: ['public-slots'],
@@ -124,6 +126,15 @@ export function invalidateBookings(client: QueryClient) {
     prefix.slots,
     prefix.publicSlots,
   ]);
+}
+
+/**
+ * Zdjęcia nie ruszają kalendarza, więc odświeżamy tylko je — ale wszystkie
+ * zestawy naraz: ta sama wizyta bywa pobrana raz sama, a raz razem z historią
+ * całego klienta.
+ */
+export function invalidateBookingPhotos(client: QueryClient) {
+  invalidateAll(client, [prefix.bookingPhotos]);
 }
 
 /** Blokada czasu zabiera termin z puli — tak samo jak wizyta. */

@@ -8,7 +8,7 @@ import type { BookingStatus } from '@/features/bookings/queries';
 import { statusLabel, statusTone } from '@/features/bookings/status';
 import { useClientBookings, type ClientListItem } from '@/features/clients/queries';
 import { t } from '@/i18n';
-import { formatCompactDate, formatFullDate, formatPrice, formatTimeRange } from '@/lib/format';
+import { formatCompactDate, formatDayAndTime, formatFullDate, formatPrice } from '@/lib/format';
 import { useTheme } from '@/theme';
 
 /**
@@ -141,8 +141,10 @@ export function ClientRow({ client, zone, onOpen }: {
                   style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs }}
                 >
                   <Text variant="small" style={{ flex: 1 }}>
-                    {formatFullDate(visit.startsAt, zone)} ·{' '}
-                    {formatTimeRange(visit.startsAt, visit.endsAt, zone)}
+                    {formatDayAndTime(visit.startsAt, visit.endsAt, zone).day}{' '}
+                    <Text variant="small" tone="muted">
+                      {formatDayAndTime(visit.startsAt, visit.endsAt, zone).time}
+                    </Text>
                   </Text>
                   <Badge
                     label={statusLabel(visit.status as BookingStatus)}

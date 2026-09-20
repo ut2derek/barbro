@@ -171,6 +171,51 @@ export type Database = {
           },
         ]
       }
+      booking_photos: {
+        Row: {
+          booking_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          salon_id: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          salon_id: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          salon_id?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_photos_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_photos_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       booking_reviews: {
         Row: {
           booking_id: string
@@ -1500,6 +1545,7 @@ export type Database = {
           staff_id: string
         }[]
       }
+      storage_path_salon_id: { Args: { p_name: string }; Returns: string }
     }
     Enums: {
       booking_source: "web" | "manual" | "app"

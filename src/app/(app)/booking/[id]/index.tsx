@@ -2,14 +2,17 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Linking, View } from 'react-native';
 
+import { BookingPhotos } from '@/components/bookings/booking-photos';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
+import { useBookingPhotos } from '@/features/bookings/photos';
 import { useBooking, useChangeBookingStatus } from '@/features/bookings/queries';
 import { statusLabel, statusTone } from '@/features/bookings/status';
+import { useCurrentSalon, useMyStaffId } from '@/features/salon/use-current-salon';
 import { useSalonTimezone } from '@/features/salon/use-salon-timezone';
 import { t } from '@/i18n';
 import { formatFullDate, formatPrice, formatTimeRange } from '@/lib/format';
@@ -22,6 +25,9 @@ export default function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const { data: booking, isPending } = useBooking(id);
+  const { data: salon } = useCurrentSalon();
+  const { data: myStaffId } = useMyStaffId();
+  const { data: photos, isPending: photosPending } = useBookingPhotos(id ? [id] : []);
   const changeStatus = useChangeBookingStatus();
 
   const [cancelling, setCancelling] = useState(false);
@@ -83,6 +89,16 @@ export default function BookingDetailScreen() {
         <Text variant="small" tone="muted">
           {t('booking.priceLocked')}
         </Text>
+      </Card>
+
+      <Card>
+        <BookingPhotos
+          bookingId={booking.id}
+          salonId={salon?.salonId}
+          photos={photos?.[booking.id] ?? []}
+          loading={photosPending}
+          canEdit={salon?.role === 'owner' || booking.staffId === myStaffId}
+        />
       </Card>
 
       <Card>
