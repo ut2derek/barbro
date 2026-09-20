@@ -52,9 +52,14 @@ export default function TodayScreen() {
         }}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
       >
-        <View style={{ gap: theme.spacing.xxs }}>
+        {/* Tytuł i data w jednej linii: „Dziś” mówi, gdzie jesteś, data jest
+            tylko dopowiedzeniem. Data wyrównana do linii pisma tytułu, żeby
+            nie wisiała przy jego górnej krawędzi. */}
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: theme.spacing.sm }}>
           <Text variant="display">{t('today.title')}</Text>
-          <Text tone="secondary">{formatFullDate(today.toISO()!, zone)}</Text>
+          <Text tone="secondary" style={{ flex: 1 }}>
+            {formatFullDate(today.toISO()!, zone)}
+          </Text>
         </View>
 
         {salon ? (
