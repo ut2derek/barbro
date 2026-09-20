@@ -14,6 +14,25 @@ export type ClientOption = {
   blocked: boolean;
 };
 
+/** Pozycja listy klientów — to samo co wyżej plus data ostatniej wizyty. */
+export type ClientListItem = ClientOption & {
+  /** Puste = klient nie ma jeszcze żadnej wizyty. */
+  lastVisitAt: string | null;
+};
+
+/**
+ * Kolejność listy klientów. Sortuje baza — przy większej kartotece układanie
+ * tego w aplikacji znaczyłoby ściąganie wszystkich klientów naraz.
+ */
+export type ClientSort = 'name' | 'newest' | 'recentVisit' | 'oldestVisit';
+
+const SORT_COLUMNS: Record<ClientSort, { column: string; ascending: boolean }> = {
+  name: { column: 'first_name', ascending: true },
+  newest: { column: 'created_at', ascending: false },
+  recentVisit: { column: 'last_visit_at', ascending: false },
+  oldestVisit: { column: 'last_visit_at', ascending: true },
+};
+
 /** Karta klienta — to samo co wyżej plus dane, których lista nie potrzebuje. */
 export type ClientDetails = ClientOption & {
   firstName: string;
@@ -39,19 +58,28 @@ function pelneImie(firstName: string, lastName: string | null): string {
 }
 
 /** Wyszukiwanie klienta po imieniu, nazwisku, telefonie albo mailu. */
-export function useClientSearch(args: { salonId: string | undefined; query: string }) {
+export function useClientSearch(args: {
+  salonId: string | undefined;
+  query: string;
+  sort?: ClientSort;
+}) {
   const term = args.query.trim();
+  const sort = args.sort ?? 'name';
 
   return useQuery({
-    queryKey: queryKeys.clients(args.salonId, term),
+    queryKey: queryKeys.clients(args.salonId, term, sort),
     enabled: Boolean(args.salonId),
-    queryFn: async (): Promise<ClientOption[]> => {
+    queryFn: async (): Promise<ClientListItem[]> => {
+      const order = SORT_COLUMNS[sort];
+
       let request = getSupabase()
-        .from('clients')
-        .select('id, first_name, last_name, phone, email, no_show_count, blocked')
+        .from('client_overview')
+        .select('id, first_name, last_name, phone, email, no_show_count, blocked, last_visit_at')
         .eq('salon_id', args.salonId!)
-        .order('first_name')
-        .limit(20);
+        // Klienci bez wizyt lądują na końcu przy obu porządkach „po wizytach” —
+        // inaczej przy „najstarsze wizyty” puste wartości zajęłyby cały ekran.
+        .order(order.column, { ascending: order.ascending, nullsFirst: false })
+        .limit(50);
 
       if (term.length >= 2) {
         const pattern = `%${term}%`;
@@ -64,12 +92,13 @@ export function useClientSearch(args: { salonId: string | undefined; query: stri
       if (error) throw error;
 
       return data.map((client) => ({
-        id: client.id,
-        name: pelneImie(client.first_name, client.last_name),
-        phone: client.phone,
-        email: client.email,
-        noShowCount: client.no_show_count,
-        blocked: client.blocked,
+        id: client.id!,
+        name: pelneImie(client.first_name!, client.last_name),
+        phone: client.phone!,
+        email: client.email!,
+        noShowCount: client.no_show_count!,
+        blocked: client.blocked!,
+        lastVisitAt: client.last_visit_at,
       }));
     },
   });

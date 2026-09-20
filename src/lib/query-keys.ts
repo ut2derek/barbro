@@ -49,7 +49,8 @@ export const queryKeys = {
     ['staff-services', salonId, staffId] as const,
 
   // --- klienci ---
-  clients: (salonId: string | undefined, term: string) => ['clients', salonId, term] as const,
+  clients: (salonId: string | undefined, term: string, sort: string) =>
+    ['clients', salonId, term, sort] as const,
   client: (clientId: string | undefined) => ['client', clientId] as const,
   clientBookings: (clientId: string | undefined) => ['client-bookings', clientId] as const,
 

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 
@@ -9,9 +10,11 @@ type Props = TextInputProps & {
   label: string;
   error?: string | null;
   hint?: string;
+  /** Znak przed polem — lupka w wyszukiwarce, ikona przy polu daty. */
+  icon?: ReactNode;
 };
 
-export function Input({ label, error, hint, style, ...rest }: Props) {
+export function Input({ label, error, hint, icon, style, ...rest }: Props) {
   const theme = useTheme();
   const [focused, setFocused] = useState(false);
 
@@ -21,31 +24,45 @@ export function Input({ label, error, hint, style, ...rest }: Props) {
         {label}
       </Text>
 
-      <TextInput
-        accessibilityLabel={label}
-        placeholderTextColor={theme.colors.textMuted}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        style={[
-          theme.typography.body,
-          {
-            minHeight: theme.minTouchTarget,
-            paddingHorizontal: theme.spacing.md,
-            paddingVertical: theme.spacing.sm,
-            borderRadius: theme.radius.md,
-            borderWidth: 1,
-            borderColor: error
-              ? theme.colors.danger
-              : focused
-                ? theme.colors.borderStrong
-                : theme.colors.border,
-            backgroundColor: theme.colors.surfaceElevated,
-            color: theme.colors.textPrimary,
-          },
-          style,
-        ]}
-        {...rest}
-      />
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: theme.spacing.sm,
+          minHeight: theme.minTouchTarget,
+          paddingHorizontal: theme.spacing.md,
+          borderRadius: theme.radius.md,
+          borderWidth: 1,
+          borderColor: error
+            ? theme.colors.danger
+            : focused
+              ? theme.colors.borderStrong
+              : theme.colors.border,
+          backgroundColor: theme.colors.surfaceElevated,
+        }}
+      >
+        {icon}
+
+        <TextInput
+          accessibilityLabel={label}
+          placeholderTextColor={theme.colors.textMuted}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          style={[
+            theme.typography.body,
+            {
+              flex: 1,
+              paddingVertical: theme.spacing.sm,
+              color: theme.colors.textPrimary,
+              // Pole samo nie rysuje już ramki — robi to wiersz wokół niego,
+              // żeby ikona leżała w środku pola, a nie obok.
+              outlineWidth: 0,
+            },
+            style,
+          ]}
+          {...rest}
+        />
+      </View>
 
       {error ? (
         <Text variant="small" tone="danger">

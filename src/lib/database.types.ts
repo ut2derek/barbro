@@ -223,6 +223,13 @@ export type Database = {
             foreignKeyName: "booking_reviews_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "client_overview"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "booking_reviews_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
@@ -292,6 +299,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          buffer_after_minutes: number
           cancellation_comment: string | null
           client_id: string
           client_note: string | null
@@ -315,6 +323,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          buffer_after_minutes?: number
           cancellation_comment?: string | null
           client_id: string
           client_note?: string | null
@@ -338,6 +347,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          buffer_after_minutes?: number
           cancellation_comment?: string | null
           client_id?: string
           client_note?: string | null
@@ -361,6 +371,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_overview"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_client_id_fkey"
             columns: ["client_id"]
@@ -1313,7 +1330,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      client_overview: {
+        Row: {
+          blocked: boolean | null
+          completed_count: number | null
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          id: string | null
+          last_name: string | null
+          last_visit_at: string | null
+          no_show_count: number | null
+          phone: string | null
+          salon_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_salon_overview: {
@@ -1335,6 +1375,36 @@ export type Database = {
       admin_set_salon_active: {
         Args: { p_active: boolean; p_salon_id: string }
         Returns: undefined
+      }
+      available_slots_unchecked: {
+        Args: {
+          p_extra_minutes?: number
+          p_from: string
+          p_salon_id: string
+          p_service_ids: string[]
+          p_staff_id?: string
+          p_to: string
+        }
+        Returns: {
+          slot_end: string
+          slot_start: string
+          staff_id: string
+        }[]
+      }
+      booking_item_lines: {
+        Args: {
+          p_salon_id: string
+          p_service_ids: string[]
+          p_staff_id: string
+        }
+        Returns: {
+          buffer_after_minutes: number
+          duration_minutes: number
+          item_order: number
+          name_snapshot: string
+          price_grosz: number
+          service_id: string
+        }[]
       }
       caller_may_read_salon: { Args: { p_salon_id: string }; Returns: boolean }
       change_booking_status: {
@@ -1363,36 +1433,21 @@ export type Database = {
       current_staff_id: { Args: { p_salon_id: string }; Returns: string }
       deactivate_finished_promotions: { Args: never; Returns: number }
       expire_pending_bookings: { Args: never; Returns: number }
-      get_available_slots:
-        | {
-            Args: {
-              p_from: string
-              p_salon_id: string
-              p_service_ids: string[]
-              p_staff_id?: string
-              p_to: string
-            }
-            Returns: {
-              slot_end: string
-              slot_start: string
-              staff_id: string
-            }[]
-          }
-        | {
-            Args: {
-              p_extra_minutes?: number
-              p_from: string
-              p_salon_id: string
-              p_service_ids: string[]
-              p_staff_id?: string
-              p_to: string
-            }
-            Returns: {
-              slot_end: string
-              slot_start: string
-              staff_id: string
-            }[]
-          }
+      get_available_slots: {
+        Args: {
+          p_extra_minutes?: number
+          p_from: string
+          p_salon_id: string
+          p_service_ids: string[]
+          p_staff_id?: string
+          p_to: string
+        }
+        Returns: {
+          slot_end: string
+          slot_start: string
+          staff_id: string
+        }[]
+      }
       is_app_admin: { Args: never; Returns: boolean }
       is_salon_member: { Args: { p_salon_id: string }; Returns: boolean }
       is_salon_owner: { Args: { p_salon_id: string }; Returns: boolean }
