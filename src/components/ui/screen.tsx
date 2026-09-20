@@ -23,7 +23,7 @@ type Props = {
 };
 
 /** Maksymalna szerokość treści — na telefonie bez znaczenia, na dużym ekranie ratuje czytelność. */
-const MAX_CONTENT_WIDTH = 560;
+export const MAX_CONTENT_WIDTH = 560;
 
 /** Bezpieczny obszar + tło ekranu. Każdy ekran zaczyna się od tego komponentu. */
 export function Screen({ children, scroll = false, style, edges = ['bottom'], scrollRef }: Props) {

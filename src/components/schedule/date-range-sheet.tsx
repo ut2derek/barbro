@@ -1,9 +1,10 @@
 import { DateTime } from 'luxon';
 import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { Sheet } from '@/components/ui/sheet';
 import { Text } from '@/components/ui/text';
 import { t } from '@/i18n';
 import { useTheme } from '@/theme';
@@ -78,109 +79,88 @@ export function DateRangeSheet({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel={t('common.cancel')}
-        onPress={onClose}
-        style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.overlay }]}
-      />
-
-      <View
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: theme.colors.surfaceElevated,
-          borderTopLeftRadius: theme.radius.lg,
-          borderTopRightRadius: theme.radius.lg,
-          padding: theme.spacing.lg,
-          gap: theme.spacing.md,
-        }}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
-          <IconButton
-            glyph="‹"
-            label={t('calendarRange.previousMonth')}
-            onPress={() => setMonth(month.minus({ months: 1 }))}
-          />
-          <Text variant="heading" style={{ flex: 1, textAlign: 'center' }}>
-            {month.setLocale('pl').toFormat('LLLL yyyy')}
-          </Text>
-          <IconButton
-            glyph="›"
-            label={t('calendarRange.nextMonth')}
-            onPress={() => setMonth(month.plus({ months: 1 }))}
-          />
-        </View>
-
-        <View style={{ flexDirection: 'row' }}>
-          {WEEKDAY_HEADS.map((head, index) => (
-            <Text
-              key={`${head}-${index}`}
-              variant="small"
-              tone="muted"
-              style={{ flex: 1, textAlign: 'center' }}
-            >
-              {head}
-            </Text>
-          ))}
-        </View>
-
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-          {Array.from({ length: gridDays }, (_, index) => {
-            const day = gridStart.plus({ days: index });
-            const inMonth = day.month === month.month;
-            const selected = inRange(day);
-            const edge = day.hasSame(from, 'day') || (to !== null && day.hasSame(to, 'day'));
-
-            return (
-              <Pressable
-                key={day.toISODate()}
-                accessibilityRole="button"
-                accessibilityState={{ selected }}
-                accessibilityLabel={day.setLocale('pl').toFormat('d MMMM yyyy')}
-                onPress={() => pickDay(day)}
-                style={{
-                  width: `${100 / 7}%`,
-                  minHeight: theme.minTouchTarget,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: theme.radius.md,
-                  backgroundColor: edge
-                    ? theme.colors.accent
-                    : selected
-                      ? theme.colors.accentMuted
-                      : 'transparent',
-                }}
-              >
-                <Text
-                  variant={day.hasSame(today, 'day') ? 'bodyStrong' : 'body'}
-                  tone={edge ? 'onAccent' : inMonth ? 'primary' : 'muted'}
-                >
-                  {day.day}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <Text tone="secondary" variant="small">
-          {to === null
-            ? t('calendarRange.pickEnd')
-            : t('calendarRange.chosen', {
-                from: from.setLocale('pl').toFormat('d LLL'),
-                to: to.setLocale('pl').toFormat('d LLL'),
-              })}
-        </Text>
-
-        <Button
-          label={t('calendarRange.confirm')}
-          onPress={() => onPick({ from, to: to ?? from })}
+    <Sheet visible={visible} onClose={onClose}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md }}>
+        <IconButton
+          glyph="‹"
+          label={t('calendarRange.previousMonth')}
+          onPress={() => setMonth(month.minus({ months: 1 }))}
         />
-        <Button label={t('common.cancel')} variant="secondary" onPress={onClose} />
+        <Text variant="heading" style={{ flex: 1, textAlign: 'center' }}>
+          {month.setLocale('pl').toFormat('LLLL yyyy')}
+        </Text>
+        <IconButton
+          glyph="›"
+          label={t('calendarRange.nextMonth')}
+          onPress={() => setMonth(month.plus({ months: 1 }))}
+        />
       </View>
-    </Modal>
+
+      <View style={{ flexDirection: 'row' }}>
+        {WEEKDAY_HEADS.map((head, index) => (
+          <Text
+            key={`${head}-${index}`}
+            variant="small"
+            tone="muted"
+            style={{ flex: 1, textAlign: 'center' }}
+          >
+            {head}
+          </Text>
+        ))}
+      </View>
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+        {Array.from({ length: gridDays }, (_, index) => {
+          const day = gridStart.plus({ days: index });
+          const inMonth = day.month === month.month;
+          const selected = inRange(day);
+          const edge = day.hasSame(from, 'day') || (to !== null && day.hasSame(to, 'day'));
+
+          return (
+            <Pressable
+              key={day.toISODate()}
+              accessibilityRole="button"
+              accessibilityState={{ selected }}
+              accessibilityLabel={day.setLocale('pl').toFormat('d MMMM yyyy')}
+              onPress={() => pickDay(day)}
+              style={{
+                width: `${100 / 7}%`,
+                minHeight: theme.minTouchTarget,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: theme.radius.md,
+                backgroundColor: edge
+                  ? theme.colors.accent
+                  : selected
+                    ? theme.colors.accentMuted
+                    : 'transparent',
+              }}
+            >
+              <Text
+                variant={day.hasSame(today, 'day') ? 'bodyStrong' : 'body'}
+                tone={edge ? 'onAccent' : inMonth ? 'primary' : 'muted'}
+              >
+                {day.day}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <Text tone="secondary" variant="small">
+        {to === null
+          ? t('calendarRange.pickEnd')
+          : t('calendarRange.chosen', {
+              from: from.setLocale('pl').toFormat('d LLL'),
+              to: to.setLocale('pl').toFormat('d LLL'),
+            })}
+      </Text>
+
+      <Button
+        label={t('calendarRange.confirm')}
+        onPress={() => onPick({ from, to: to ?? from })}
+      />
+      <Button label={t('common.cancel')} variant="secondary" onPress={onClose} />
+    </Sheet>
   );
 }

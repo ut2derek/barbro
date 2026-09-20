@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { MAX_CONTENT_WIDTH } from '@/components/ui/screen';
+import { Sheet } from '@/components/ui/sheet';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Text } from '@/components/ui/text';
 import {
@@ -204,39 +206,17 @@ function SourceSheet({
   onClose: () => void;
   onPick: (source: 'library' | 'camera') => void;
 }) {
-  const theme = useTheme();
-
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('common.cancel')}
-          onPress={onClose}
-          style={[StyleSheet.absoluteFill, { backgroundColor: theme.colors.overlay }]}
-        />
-
-        <View
-          style={{
-            backgroundColor: theme.colors.surfaceElevated,
-            borderTopLeftRadius: theme.radius.xl,
-            borderTopRightRadius: theme.radius.xl,
-            padding: theme.spacing.lg,
-            paddingBottom: theme.spacing.xxl,
-            gap: theme.spacing.md,
-          }}
-        >
-          <Text variant="heading">{t('bookingPhotos.add')}</Text>
-          <Button label={t('bookingPhotos.fromCamera')} onPress={() => onPick('camera')} />
-          <Button
-            label={t('bookingPhotos.fromLibrary')}
-            variant="secondary"
-            onPress={() => onPick('library')}
-          />
-          <Button label={t('common.cancel')} variant="secondary" onPress={onClose} />
-        </View>
-      </View>
-    </Modal>
+    <Sheet visible={visible} onClose={onClose}>
+      <Text variant="heading">{t('bookingPhotos.add')}</Text>
+      <Button label={t('bookingPhotos.fromCamera')} onPress={() => onPick('camera')} />
+      <Button
+        label={t('bookingPhotos.fromLibrary')}
+        variant="secondary"
+        onPress={() => onPick('library')}
+      />
+      <Button label={t('common.cancel')} variant="secondary" onPress={onClose} />
+    </Sheet>
   );
 }
 
@@ -264,25 +244,37 @@ function PreviewSheet({
           flex: 1,
           backgroundColor: theme.colors.overlay,
           justifyContent: 'center',
+          alignItems: 'center',
           padding: theme.spacing.lg,
-          gap: theme.spacing.md,
         }}
       >
-        <Image
-          source={photo.url}
-          contentFit="contain"
-          style={{ width: '100%', flex: 1, borderRadius: theme.radius.lg }}
-        />
-
-        {canEdit ? (
-          <Button
-            label={t('bookingPhotos.delete')}
-            variant="danger"
-            onPress={() => onDelete(photo)}
+        {/* Kolumna trzyma szerokość telefonu — na laptopie zdjęcie nie
+            rozjeżdża się wtedy na cały monitor. */}
+        <View
+          style={{
+            width: '100%',
+            maxWidth: MAX_CONTENT_WIDTH,
+            flex: 1,
+            justifyContent: 'center',
+            gap: theme.spacing.md,
+          }}
+        >
+          <Image
+            source={photo.url}
+            contentFit="contain"
+            style={{ width: '100%', flex: 1, borderRadius: theme.radius.lg }}
           />
-        ) : null}
 
-        <Button label={t('common.close')} variant="secondary" onPress={onClose} />
+          {canEdit ? (
+            <Button
+              label={t('bookingPhotos.delete')}
+              variant="danger"
+              onPress={() => onDelete(photo)}
+            />
+          ) : null}
+
+          <Button label={t('common.close')} variant="secondary" onPress={onClose} />
+        </View>
       </View>
     </Modal>
   );
